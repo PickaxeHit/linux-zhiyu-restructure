@@ -137,7 +137,6 @@ in
       oldDependency = pkgs.libcamera;
       newDependency = pkgs.libcamera-zhiyu;
     };
-    environment.systemPackages = lib.optional cfg.camera.enable pkgs.libcamera-zhiyu;
     # The running kernel must be the one NixOS thinks it booted, otherwise
     # /run/booted-system/kernel-modules points at a different version and
     # udev/boot.kernelModules load nothing.
@@ -327,7 +326,8 @@ in
     environment.systemPackages = [
       flasher
       pkgs.qbootctl
-    ];
+    ]
+    ++ lib.optionals cfg.camera.enable [ pkgs.libcamera-zhiyu ];
 
     boot.loader.external = lib.mkIf cfg.flashOnSwitch {
       enable = true;

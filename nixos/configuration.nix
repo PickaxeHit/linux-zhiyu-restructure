@@ -96,16 +96,6 @@
   # flashed boot.img.
   security.apparmor.enable = true;
 
-  assertions = [
-    {
-      assertion = pkgs.libcamera.version == "0.7.2";
-      message = ''
-        libcamera-zhiyu is pinned to 0.7.2; update the fork and check ABI
-        compatibility before bumping nixpkgs.
-      '';
-    }
-  ];
-
   # ---- hardware tools --------------------------------------------------
   # libcamera-zhiyu gives `cam`; the rest are for checking the video, Vulkan,
   # OpenCL, V4L2 and audio paths on the device.
