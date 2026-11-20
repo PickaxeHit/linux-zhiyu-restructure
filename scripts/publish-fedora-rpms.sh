@@ -2,6 +2,9 @@
 # Publish RPM payloads in a Release and the directory-shaped DNF index in Git.
 set -euo pipefail
 rpms=$(realpath "${1:?RPM artifact directory required}")
+# Boot images are per-generation artifacts now; keep them out of the package
+# array, the repository index and the release.
+rm -f "$rpms"/linux-zhiyu-images-*.rpm
 sha=${2:?source commit required}
 tag=repo-rpm
 branch=rpm-repodata
@@ -31,9 +34,6 @@ for name in "${names[@]}"; do
         test -f "${candidates[0]}"
     fi
 done
-# Boot images are per-generation artifacts now; keep them out of the
-# repository and its index.
-rm -f "$rpms"/linux-zhiyu-images-*.rpm
 createrepo_c --baseurl "$baseurl" "$rpms"
 
 git worktree add --detach "$work/tree" "$GITHUB_SHA"
