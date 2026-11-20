@@ -57,13 +57,31 @@ branch=nix-stable
 work=$(mktemp -d)
 trap 'git -C "$root" worktree remove --force "$work/tree" 2>/dev/null || true; rm -rf "$work"' EXIT
 git -C "$root" worktree add --detach "$work/tree" "$rev"
-git -C "$work/tree" checkout --orphan "$branch"
-git -C "$work/tree" rm -rf --cached . >/dev/null 2>&1 || true
+
+if git -C "$root" ls-remote --exit-code --heads origin "$branch" >/dev/null; then
+    # Keep the branch history: each release is one commit on top of the last.
+    git -C "$work/tree" fetch origin "$branch"
+    git -C "$work/tree" checkout -q -B "$branch" FETCH_HEAD
+else
+    git -C "$work/tree" checkout --orphan "$branch"
+    git -C "$work/tree" rm -rf --cached . >/dev/null 2>&1 || true
+fi
 find "$work/tree" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
 cp -a "$dest/." "$work/tree/"
 git -C "$work/tree" add -A
+if git -C "$work/tree" diff --cached --quiet; then
+    echo "$branch is unchanged"
+    exit 0
+fi
 git -C "$work/tree" -c user.name=github-actions\[bot\] \
     -c user.email=41898282+github-actions\[bot\]@users.noreply.github.com \
     commit -q -m "nix-stable: $(git -C "$root" rev-parse --short "$rev")"
-git -C "$work/tree" push --force origin "HEAD:refs/heads/$branch"
+git -C "$work/tree" push origin "HEAD:refs/heads/$branch"
+
+# A tag per release makes old trees easy to refer to.
+if [[ -n "${GITHUB_RUN_ID:-}" ]]; then
+    tag="nix-$(date -u +%Y%m%d)-${GITHUB_RUN_ID}"
+    git -C "$work/tree" tag -f "$tag" >/dev/null
+    git -C "$work/tree" push origin "$tag"
+fi
 echo "pushed $branch from $(git -C "$root" rev-parse --short "$rev")"

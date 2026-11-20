@@ -36,6 +36,8 @@ jobs:
             experimental-features = nix-command flakes
             max-jobs = ${{ inputs.jobs }}
             cores = 4
+            extra-substituters = https://raw.githubusercontent.com/PickaxeHit/linux-zhiyu-restructure/nix-repodata
+            extra-trusted-public-keys = zhiyu-cache-1:bI3q/LSJTidQCaNFmF8hpa9egw4SeNQ/vU0BJpW+kqo=
 
       - name: Restore Nix store cache
         uses: nix-community/cache-nix-action@v6
@@ -48,6 +50,33 @@ jobs:
 
       - name: Materialize the nix-stable tree
         run: scripts/make-nix-stable.sh "$RUNNER_TEMP/nix-stable"
+
+      - name: Check the NixOS configuration uses the cached packages
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/nix-stable"
+          sys() {
+            nix eval --raw --impure --expr \
+              "let f = builtins.getFlake \"path:$root\"; in f.nixosConfigurations.zhiyu.$1"
+          }
+          for pair in \
+            "config.boot.kernelPackages.kernel.outPath:kernel" \
+            "config.system.build.zhiyuInitramfs.outPath:initramfs" \
+            "config.system.build.zhiyuFirmware.outPath:firmware"; do
+            attr=${pair%%:*}
+            pkg=${pair##*:}
+            a=$(sys "$attr")
+            b=$(nix eval --raw "$root#packages.aarch64-linux.$pkg.outPath" 2>/dev/null ||
+                nix eval --raw "$root#$pkg.outPath")
+            test "$a" = "$b" || {
+              echo "::error::$pkg differs between the NixOS configuration ($a) and the flake ($b)" >&2
+              exit 1
+            }
+          done
+          # The images embed the system's own command line, so they are only
+          # evaluated here (and cached per generation, not in the release).
+          sys config.system.build.zhiyuImages.drvPath >/dev/null
+          echo "NixOS configuration matches the cached kernel/initramfs/firmware"
 
       - name: Build images and flasher
         run: |
@@ -68,18 +97,17 @@ jobs:
           mkdir -p cache
           root="$RUNNER_TEMP/nix-stable"
           paths=$(nix build \
-            "$root#kernel" "$root#initramfs" "$root#keymint" \
+            "$root#kernel^*" "$root#initramfs" "$root#keymint" \
             "$root#firmware" "$root#dts" "$root#libcamera-zhiyu" \
             "$root#zhiyu-install" "$root#sensh" "$root#sensord" \
             "$root#qcomVaDriver" "$root#qcomSensors" \
             "$root#zhiyu-ucm2" "$root#udevRules" "$root#zhiyu-images" \
             --print-out-paths)
-          if [ -n "${NIX_CACHE_PRIVATE_KEY:-}" ]; then
-            printf '%s' "$NIX_CACHE_PRIVATE_KEY" > "$RUNNER_TEMP/cache.key"
-            nix store sign --key-file "$RUNNER_TEMP/cache.key" -r $paths
-          else
-            echo "::warning::NIX_CACHE_PRIVATE_KEY is not set; the cache will be unsigned"
-          fi
+          : "${NIX_CACHE_PRIVATE_KEY:?NIX_CACHE_PRIVATE_KEY must be set: refusing to publish an unsigned cache}"
+          printf '%s' "$NIX_CACHE_PRIVATE_KEY" > "$RUNNER_TEMP/cache.key"
+          chmod 600 "$RUNNER_TEMP/cache.key"
+          nix store sign --key-file "$RUNNER_TEMP/cache.key" -r $paths
+          rm -f "$RUNNER_TEMP/cache.key"
           nix copy --to "file://$PWD/cache" $paths
           du -sh cache
           ls cache/nar | wc -l
