@@ -11,6 +11,8 @@
 let
   firmwareBlobs = fetchzip {
     inherit (sources.firmware-blobs) url hash;
+    # The archive has two top-level directories (firmware, sensors).
+    stripRoot = false;
   };
 in
 stdenv.mkDerivation {

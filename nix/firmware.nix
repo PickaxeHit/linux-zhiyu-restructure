@@ -19,6 +19,8 @@ let
   # the lock, so they are not part of a lightweight checkout.
   firmwareBlobs = fetchzip {
     inherit (sources.firmware-blobs) url hash;
+    # The archive has two top-level directories (firmware, sensors).
+    stripRoot = false;
   };
 
   # The topology's entry point includes the vendor tree ("audioreach/...",
