@@ -1,0 +1,594 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Zhiyu (Lenovo TB378FC, SM8750P) initramfs init.
+#
+# Adapted from the xiaomipad-8pro-mainline initramfs (yzddmr6, GPL-2.0-only).
+#
+# Three jobs, in this order:
+#
+#   1. Bring up USB + NCM so the host can reach the board over the link.
+#
+#   2. Load the WCN7860 Wi-Fi stack EARLY.  The chip's MHI boot must complete
+#      before the rest of the system takes over PCIe (runtime PM / ASPM);
+#      loading ath12k from userspace later always fails with
+#      "mhi mhi0: MHI did not enter READY state" (-110).
+#      This is the single most important thing in this script -
+#      see notes/UPSTREAM.md for how much debugging it cost.
+#
+#   3. Mount the Linux rootfs and switch_root into its init (/sbin/init,
+#      or the NixOS system generation's init).
+#
+# Prepare Linux mountpoints, then move /proc, /sys, /dev and /run before
+# switch_root. Android's /data root permissions and encryption policies stay
+# unchanged; the full userdata view has a Linux-only protected parent.
+#
+# If step 3 fails we drop to a diagnostic shell instead of panicking, so a
+# broken image can never make the board unreachable.
+#
+export PATH=/bin
+
+# Install all busybox applets first (pack-time symlinks cover early use).
+/bin/busybox --install -s /bin 2>/dev/null
+
+# Use /dev/console when it opens (fbcon on the ABL splash framebuffer via
+# CONFIG_FRAMEBUFFER_CONSOLE + simple-framebuffer), /dev/null otherwise.
+if (exec </dev/console >/dev/console) 2>/dev/null; then
+	exec </dev/console >/dev/console 2>&1
+else
+	exec </dev/null >/dev/null 2>&1
+fi
+
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+mkdir -p /dev/pts /run /sys/kernel/config
+mount -t devpts devpts /dev/pts
+mount -t tmpfs tmpfs /run
+
+# Kernel log doubles as the on-screen progress channel: fbcon paints
+# /dev/kmsg messages onto the bootloader framebuffer.
+# Only ever write to the kernel log: visibility on the console is then
+# controlled by the standard `quiet` / `loglevel=` kernel parameters, the
+# same way every other initramfs does it.  Writing to stdout as well would
+# bypass loglevel and paint the panel even when quiet is set.
+log() { echo "<6>ZHIYU: $*" >/dev/kmsg; }
+cmsg() { log "ROOTFS: $*"; }
+
+log "INIT $(uname -r)"
+
+# Modules are loaded in the order depmod computed at ramdisk build time
+# (`load-order`, one "<phase><TAB><path>" line per module, dependencies first).
+# Guessing the order and retrying used to cost a dmesg full of
+# "Unknown symbol cfg80211_*" on every boot; with the real order a failure now
+# means the module really could not be loaded.
+moddir=/lib/modules/$(uname -r)
+load_order=$moddir/load-order
+loaded_list=/tmp/.loaded
+failed_list=/tmp/.failed
+: > "$loaded_list"
+: > "$failed_list"
+tab=$(printf '\t')
+mods_in_phase=0
+
+load_mod() {
+	rel=$1
+	grep -qx "$rel" "$loaded_list" && return 0
+	if insmod "$moddir/$rel" 2>/dev/null; then
+		echo "$rel" >> "$loaded_list"
+		mods_in_phase=$((mods_in_phase + 1))
+		return 0
+	fi
+	return 1
+}
+
+# Report a module that did not load, once.
+load_failed() {
+	grep -qx "$1" "$failed_list" && return 0
+	echo "$1" >> "$failed_list"
+	log "$2: FAIL $1"
+}
+
+# load_phase <n> <tag>: load every module of phase <n>, in dependency order.
+load_phase() {
+	mods_in_phase=0
+	while IFS="$tab" read -r phase rel; do
+		[ "$phase" = "$1" ] || continue
+		[ -n "$rel" ] || continue
+		load_mod "$rel" || load_failed "$rel" "$2"
+	done < "$load_order"
+	log "$2: $mods_in_phase loaded"
+}
+
+if [ -f "$load_order" ]; then
+	# -------------------------------------------------------------------
+	# 1. Wi-Fi stack first: the chip's MHI boot must finish before the rest
+	#    of the system takes over PCIe (runtime PM / ASPM), otherwise ath12k
+	#    fails with "MHI did not enter READY state" (-110).
+	# -------------------------------------------------------------------
+	load_phase 1 WIRELESS
+else
+	# Should not happen: build.sh always writes the order.  Fall back to a
+	# blind load, so a mismatched ramdisk cannot leave the board dead.
+	log "MODULES: no $load_order, falling back to a blind load"
+	for pass in 1 2 3 4 5; do
+		count=0
+		for k in /lib/modules/*/*.ko; do
+			rel=${k#/lib/modules/*/}
+			load_mod "$rel" && count=$((count + 1))
+		done
+		[ "$count" -eq 0 ] && break
+	done
+fi
+
+# ---------------------------------------------------------------------------
+# 2. USB gadget (the NCM link is brought up from userspace).
+# ---------------------------------------------------------------------------
+usb_state="ok"
+# The gadget needs a UDC; in a host-only boot (dr_mode=host) there is none and
+# this must not block the whole init: bound it and skip when no UDC exists.
+# The NCM gadget is set up from userspace (zhiyu-usb-net.service) instead of
+# here: with dr_mode=otg the write of the UDC can block in the USB/PHY init
+# path, and a task stuck in D state cannot be killed by `timeout`, which used
+# to stall init before switch_root and leave the screen black.
+log "USB: gadget setup deferred to userspace"
+usb_state="DEFERRED"
+
+# ---------------------------------------------------------------------------
+# 2b. ADSP remoteproc, then the PMIC glink that talks to it.
+# ---------------------------------------------------------------------------
+if [ -f "$load_order" ]; then
+	load_phase 2 BATTERY
+	sleep 2
+	load_phase 3 BATTERY
+fi
+
+# ---------------------------------------------------------------------------
+# 3. Everything else the ramdisk carries, in dependency order: phase 4 is the
+#    top level, phase 5 the audio tree (loaded below, once the ADSP runs).
+# ---------------------------------------------------------------------------
+[ -f "$load_order" ] && load_phase 4 MODULES
+
+# ABL marks an off-mode charging boot independently of USB presence.
+# Check both locations since vendor firmware can pass it as bootconfig.
+if grep -Eq '(^|[[:space:]])(offmode\.charge=1|androidboot\.mode=charger)([[:space:]]|$)' /proc/cmdline ||
+   grep -Eq '^offmode\.charge[[:space:]]*=[[:space:]]*"1"[[:space:]]*$|^androidboot\.mode[[:space:]]*=[[:space:]]*"charger"[[:space:]]*$' /proc/bootconfig 2>/dev/null; then
+	log "CHARGER: waiting for the power key"
+	if [ -x /bin/charger ]; then
+		printk_levels=$(cat /proc/sys/kernel/printk)
+		ignore_loglevel=/sys/module/printk/parameters/ignore_loglevel
+		console_override=$(cat "$ignore_loglevel" 2>/dev/null)
+		if [ "$console_override" = Y ]; then
+			echo N > "$ignore_loglevel"
+		fi
+		echo 1 > /proc/sys/kernel/printk
+		/bin/charger 2>/dev/kmsg
+		charger_status=$?
+		echo "$printk_levels" > /proc/sys/kernel/printk
+		if [ "$console_override" = Y ]; then
+			echo Y > "$ignore_loglevel"
+		fi
+		log "CHARGER: helper exited with status $charger_status, continuing boot"
+	else
+		log "CHARGER: /bin/charger missing or not executable, continuing boot"
+	fi
+fi
+
+
+# The topology parser runs when the machine driver probes, so its debug output
+# has to be enabled through debugfs once the modules are in.
+mount -t debugfs none /sys/kernel/debug 2>/dev/null || true
+
+# ---------------------------------------------------------------------------
+# 3b. Audio: q6apm / AudioReach, after the ADSP remoteproc is running.  Phase 5
+#     of the load order is the audio tree, dependencies first.
+# ---------------------------------------------------------------------------
+for i in $(seq 1 60); do
+	for r in /sys/class/remoteproc/*; do
+		[ "$(cat "$r/state" 2>/dev/null)" = "running" ] && break 2
+	done
+	sleep 1
+done
+log "AUDIO: remoteproc states=$(for r in /sys/class/remoteproc/*; do printf '%s=%s ' "$(basename "$r")" "$(cat "$r/state" 2>/dev/null)"; done)"
+if [ -f "$load_order" ]; then
+	load_phase 5 AUDIO
+else
+	for m in apr q6core soundcore snd snd-seq-device snd-timer snd-pcm \
+		 snd-compress snd-pcm-dmaengine snd-soc-core snd-q6dsp-common \
+		 snd-q6apm q6prm q6prm-clocks q6apm-dai q6apm-lpass-dais \
+		 snd-soc-aw88395-lib snd-soc-aw882xx snd-soc-lpass-macro-common \
+		 snd-soc-lpass-va-macro snd-soc-lpass-tx-macro \
+		 snd-soc-lpass-rx-macro slimbus soundwire-bus soundwire-qcom \
+		 snd-soc-wcd-common snd-soc-wcd-mbhc regmap-sdw \
+		 snd-soc-wcd939x-sdw snd-soc-wcd-classh snd-soc-wcd939x \
+		 snd-soc-qcom-common snd-soc-qcom-sdw snd-soc-sm8750 snd-seq; do
+		for k in /lib/modules/*/audio/"$m".ko; do
+			[ -f "$k" ] || continue
+			rel=${k#/lib/modules/*/}
+			load_mod "$rel" || load_failed "$rel" AUDIO
+		done
+	done
+fi
+
+# q6apm fetches the topology asynchronously, once the ADSP's GPR service
+# shows up, and the kernel resolves firmware paths through its own root —
+# which switch_root empties.  The request used to land a few tens of
+# milliseconds after the switch and failed with -ENOENT ("failed to probe aux
+# component"), leaving the card unregistered.  Give it a moment here, while
+# the initramfs still carries qcom/sm8750/sm8750-tplg.bin.
+i=0
+while [ "$i" -lt 3 ]; do
+	grep -q '^ [0-9]' /proc/asound/cards 2>/dev/null && break
+	i=$((i + 1))
+	sleep 1
+done
+log "AUDIO: card ready after ${i}s"
+
+printf 'file qdsp6/topology.c +p\nfile qdsp6/q6apm.c +p\nfile qdsp6/audioreach.c +p\n' \
+	>> /sys/kernel/debug/dynamic_debug/control 2>/dev/null || true
+
+
+# Capture runs a single graph: the topology puts the codec-DMA device sub-graph
+# into the frontend graph, the same way the TDM playback device sub-graph is
+# handled, because the vendor DSP refuses to move data across two graphs while
+# it happily accepts both GRAPH_OPENs and both GRAPH_STARTs.  The capture
+# frontend is MultiMedia3, whose q6apm-dai graph id is its DAI index (2), so the
+# backend has to be told that id instead of its own DAI index (120).
+if [ -e /sys/module/q6apm_lpass_dais/parameters/capture_be_graph_id ]; then
+	echo 2 > /sys/module/q6apm_lpass_dais/parameters/capture_be_graph_id
+	log "AUDIO: capture backend graph id $(cat /sys/module/q6apm_lpass_dais/parameters/capture_be_graph_id)"
+fi
+
+
+# ---------------------------------------------------------------------------
+# 3b. Factory MAC addresses (WLAN from wlan_mac.bin, BT from bd_addr.bin)
+# mainline ath12k never reads the vendor's factory MAC file, so the firmware
+# hands out a fresh random address on every boot. DHCP leases and captive
+# portal sessions are keyed by MAC, so apply the factory value taken from the
+# persist partition (mounted read-only) before userspace starts. Nothing
+# device-unique is stored in the image itself.
+# ---------------------------------------------------------------------------
+apply_factory_macs() {
+	iface=
+	i=0
+	while [ -z "$iface" ] && [ "$i" -lt 40 ]; do
+		for p in /sys/class/net/*; do
+			if [ -d "$p/wireless" ]; then
+				iface=${p##*/}
+				break
+			fi
+		done
+		[ -n "$iface" ] || sleep 0.5
+		i=$((i + 1))
+	done
+	if [ -z "$iface" ]; then
+		log "WLAN: no wireless interface, skipping factory MAC"
+		return 0
+	fi
+
+	# There is no udev in here, so /dev/disk/by-partlabel does not exist yet:
+	# find the partition through the kernel's sysfs attributes instead.
+	persist_dev=
+	for b in /sys/class/block/*; do
+		if grep -q '^PARTNAME=persist$' "$b/uevent" 2>/dev/null; then
+			persist_dev=/dev/${b##*/}
+			break
+		fi
+	done
+	if [ -z "$persist_dev" ]; then
+		log "WLAN: persist partition not found, skipping factory MAC"
+		return 0
+	fi
+
+	mkdir -p /mnt/persist
+	if ! mount -o ro -t ext4 "$persist_dev" /mnt/persist 2>/dev/null; then
+		log "WLAN: cannot mount $persist_dev read-only, skipping factory MAC"
+		return 0
+	fi
+
+	# The factory Bluetooth address.  It is the phone's own identity, so it
+	# stays here in persist instead of being written into the device tree; the
+	# kernel takes it through the management command btaddr sends.
+	bt=
+	if [ -r /mnt/persist/bd_addr.bin ]; then
+		bt=$(tr -d '\0' < /mnt/persist/bd_addr.bin | head -c 17)
+		[ ${#bt} -eq 17 ] || bt=
+	fi
+
+	mac=
+	if [ -r /mnt/persist/peach_v2/wlan_mac.bin ]; then
+		hex=$(sed -n 's/^Intf0MacAddress=\([0-9a-fA-F]\{12\}\).*/\1/p' \
+			/mnt/persist/peach_v2/wlan_mac.bin | head -1)
+		[ -n "$hex" ] && mac=$(printf '%s' "$hex" |
+			sed 's/\(..\)\(..\)\(..\)\(..\)\(..\)\(..\)/\1:\2:\3:\4:\5:\6/')
+	fi
+	# No wlan_mac.bin: the vendor derives the WLAN address from the BT one.
+	if [ -z "$mac" ] && [ -n "$bt" ]; then
+		o5=$(echo "$bt" | cut -d: -f5)
+		o6=$(echo "$bt" | cut -d: -f6)
+		n=$((16#$o6 + 1))
+		o6=$(printf '%02x' $((n & 0xff)))
+		if [ $((n >> 8)) -ne 0 ]; then
+			m=$((16#$o5 + 1))
+			o5=$(printf '%02x' $((m & 0xff)))
+		fi
+		mac=${bt%:*:*}:$o5:$o6
+	fi
+	# Bluetooth: the controller is still down at this point (bluetoothd has not
+	# started yet), which is the only state the kernel accepts an address in.
+	# The controller only accepts an address while it is down, and right after
+	# the modules load it is still being set up (firmware download), so retry
+	# until the kernel takes it.
+	if [ -n "$bt" ] && [ -x /bin/btaddr ]; then
+		i=0
+		bt_err=
+		while [ "$i" -lt 30 ]; do
+			i=$((i + 1))
+			if bt_err=$(/bin/btaddr hci0 "$bt" 2>&1); then
+				bt_err=
+				break
+			fi
+			case "$bt_err" in
+			*"no reply"*|*socket*|*bind*) ;;	# hci0 not there yet
+			esac
+			sleep 1
+		done
+		if [ -z "$bt_err" ]; then
+			log "BT: factory address $bt set (after ${i}s)"
+		else
+			log "BT: factory address not applied: $bt_err"
+		fi
+	fi
+
+	umount /mnt/persist 2>/dev/null || true
+
+	if [ -z "$mac" ]; then
+		log "WLAN: no factory MAC found, leaving the firmware address"
+		return 0
+	fi
+
+	cur=$(cat "/sys/class/net/$iface/address")
+	if [ "$cur" = "$mac" ]; then
+		log "WLAN: $iface MAC already $mac"
+	else
+		ip link set dev "$iface" down
+		if ip link set dev "$iface" address "$mac"; then
+			log "WLAN: $iface MAC $cur -> $mac"
+		else
+			log "WLAN: failed to set $iface MAC to $mac (staying on $cur)"
+		fi
+	fi
+	# Leave the interface up either way.  NetworkManager brings it up by
+	# itself when it activates a connection, but a radio that is down makes
+	# "nmcli device status" report the device as unavailable, which is a
+	# confusing place to debug from.
+	ip link set dev "$iface" up 2>/dev/null ||
+		log "WLAN: cannot bring $iface up"
+}
+
+# ---------------------------------------------------------------------------
+# 4. rootfs (userdata/linux or microSD) -> switch_root into /sbin/init.
+# ---------------------------------------------------------------------------
+# 4a. Android userdata (plain F2FS or metadata-encrypted F2FS) -> /data/linux.
+# The Linux rootfs is a plain directory on the shared f2fs, so the space is
+# shared dynamically with Android instead of being split into partitions.
+data_rootfs() {
+	case " $(cat /proc/cmdline) " in
+		*" zhiyu.root=sd "*) cmsg "SD root requested"; return 1 ;;
+	esac
+	# The UFS probe is asynchronous: the partitions show up a moment after the
+	# module is in, so wait for the userdata one instead of looking once.  A
+	# single look used to be enough only because the old module loop happened
+	# to spend a couple of seconds retrying unrelated insmods.
+	ud=
+	i=0
+	while [ "$i" -lt 30 ]; do
+		for b in /sys/class/block/*; do
+			if grep -q '^PARTNAME=userdata$' "$b/uevent" 2>/dev/null; then
+				ud=/dev/${b##*/}
+				break
+			fi
+		done
+		[ -n "$ud" ] && break
+		i=$((i + 1))
+		sleep 1
+	done
+	[ -n "$ud" ] || { cmsg "no userdata partition after ${i}s"; return 1; }
+	[ "$i" -gt 0 ] && cmsg "userdata $ud after ${i}s"
+
+	mkdir -p /mnt/data
+	data_encrypted=0
+	if mount -t f2fs -o ro,norecovery,inlinecrypt "$ud" /mnt/data; then
+		if ! /bin/userdata-map check-writable "$ud"; then
+			cmsg "plain userdata is not ready for writing"
+			umount /mnt/data
+			return 1
+		fi
+		umount /mnt/data || return 1
+		mount -t f2fs -o rw,noatime,inlinecrypt,nodiscard,barrier,fsync_mode=posix,background_gc=off "$ud" /mnt/data || return 1
+		if ! /bin/userdata-map quota-check "$ud"; then
+			cmsg "plain userdata quotas unavailable"
+			umount /mnt/data
+			return 1
+		fi
+		cmsg "plain userdata mounted"
+	else
+		metadata=
+		for b in /sys/class/block/*; do
+			if grep -q '^PARTNAME=metadata$' "$b/uevent" 2>/dev/null; then
+				metadata=/dev/${b##*/}
+				break
+			fi
+		done
+		[ -n "$metadata" ] || { cmsg "no metadata partition"; return 1; }
+		cmsg "plain mount failed; trying metadata decryption"
+		if ! /libexec/metadata-root "$ud" "$metadata" /mnt/data >/dev/kmsg 2>&1; then
+			cmsg "metadata decryption/mount failed; falling back to SD"
+			return 1
+		fi
+		data_encrypted=1
+		cmsg "metadata-encrypted userdata mounted"
+	fi
+
+	# One-shot alternate rootfs: writing "<dir>" into /data/linux.alt makes the
+	# next boot use /data/<dir> and consumes the marker, so a broken alternate
+	# install cannot lock the board out of its normal rootfs.
+	sub=linux
+	if [ -f /mnt/data/linux.alt ]; then
+		alt=$(cat /mnt/data/linux.alt 2>/dev/null)
+		if [ -n "$alt" ] && [ -d "/mnt/data/$alt" ]; then
+			sub=$alt
+			rm -f /mnt/data/linux.alt
+			cmsg "one-shot alternate rootfs: /data/$sub"
+		else
+			cmsg "ignoring /data/linux.alt (\"$alt\" is not a directory)"
+			rm -f /mnt/data/linux.alt
+		fi
+	fi
+
+	mkdir -p /newroot
+	mount --bind "/mnt/data/$sub" /newroot || { cmsg "bind of /data/$sub failed"; release_data; return 1; }
+	cmsg "data rootfs $ud:/$sub mounted"
+	root_on_userdata=1
+	finish_rootfs || { root_on_userdata=0; umount /newroot; release_data; return 1; }
+	return 0
+}
+
+release_data() {
+	umount /mnt/data || return 1
+	[ "$data_encrypted" -eq 0 ] || /bin/userdata-map remove
+}
+
+sd_rootfs() {
+	bd=/dev/mmcblk0p1
+	for i in $(seq 1 15); do
+		[ -b "$bd" ] && break
+		sleep 1
+	done
+	if [ ! -b "$bd" ]; then
+		# The SD slot occasionally needs a re-probe after a cold start.
+		cmsg "no $bd yet - power-cycling the slot"
+		echo 8804000.mmc > /sys/bus/platform/drivers/sdhci_msm/unbind 2>/dev/null
+		sleep 3
+		echo 8804000.mmc > /sys/bus/platform/drivers/sdhci_msm/bind 2>/dev/null
+		for i in $(seq 1 15); do
+			[ -b "$bd" ] && break
+			sleep 1
+		done
+	fi
+	[ -b "$bd" ] || { cmsg "no $bd"; return 1; }
+
+	mkdir -p /newroot
+	mount -t ext4 -o rw,noatime "$bd" /newroot || { cmsg "ext4 mount of $bd failed"; return 1; }
+	cmsg "ext4 $bd mounted"
+
+	finish_rootfs || { umount /newroot; return 1; }
+}
+
+# Where to hand over.  /sbin/init is the FHS location; NixOS keeps its
+# stage-2 (or systemd) entry in the current system generation instead, and
+# does not ship /sbin/init by default.
+#
+# Symlinks in the target root must be resolved as if we had already
+# chrooted: an absolute link such as NixOS's /nix/store path points inside
+# the new root, not into the initramfs.
+rootfs_init() {
+	# FHS: /sbin/init, possibly a symlink to an absolute path.
+	if [ -L /newroot/sbin/init ]; then
+		t=$(readlink /newroot/sbin/init)
+		case $t in
+			/*) ip=$t ;;
+			*)  ip=/sbin/$t ;;
+		esac
+	else
+		ip=/sbin/init
+	fi
+	[ -x "/newroot$ip" ] && { echo "$ip"; return 0; }
+
+	# NixOS: /nix/var/nix/profiles/system -> system-N-link -> /nix/store/...
+	p=/nix/var/nix/profiles/system
+	[ -L "/newroot$p" ] || return 1
+	g=$(readlink "/newroot$p")
+	case $g in
+		/*) ;;
+		*)  g=/nix/var/nix/profiles/$g ;;
+	esac
+	if [ -L "/newroot$g" ]; then
+		s=$(readlink "/newroot$g")
+		case $s in
+			/*) ;;
+			*)  s=/nix/var/nix/profiles/$s ;;
+		esac
+	else
+		s=$g
+	fi
+	[ -x "/newroot$s/init" ] && { echo "$s/init"; return 0; }
+
+	return 1
+}
+
+finish_rootfs() {
+	init=$(rootfs_init) || {
+		cmsg "REFUSING: no /sbin/init and no NixOS system init"
+		return 1
+	}
+	cmsg "root init: $init"
+
+	apply_factory_macs
+	# The rootfs is a bind mount of /data/<sub>, so this f2fs superblock stays
+	# mounted through /newroot even after the initramfs root is discarded.
+	# Do NOT hand the rest of the partition to the guest: exposing it at
+	# /root/android-data gives the distribution a writable path into Android's
+	# own /data, and anything that walks every mountpoint (SELinux fixfiles /
+	# restorecon -R relabels, a stray recursive write) then rewrites Android's
+	# labels and metadata on the shared filesystem.
+	if [ "${root_on_userdata:-0}" -eq 1 ]; then
+		umount /mnt/data || cmsg "WARNING: /mnt/data still busy, dropping the view anyway"
+	fi
+
+	cmsg "switching to the Linux rootfs"
+	mount -o move /proc /newroot/proc 2>/dev/null
+	mount -o move /sys  /newroot/sys  2>/dev/null
+	mount -o move /dev  /newroot/dev  2>/dev/null
+	mount -o move /run  /newroot/run  2>/dev/null
+
+
+	exec switch_root /newroot "$init"
+}
+
+
+
+if data_rootfs; then
+	log "DATA-ROOTFS: switch_root returned - dropping to shell"
+elif sd_rootfs; then
+	log "SD-ROOTFS: switch_root returned - dropping to shell"
+fi
+
+# ---------------------------------------------------------------------------
+# 5. Fallback: the switch_root did not happen, so this is the only channel
+#    back to the developer.  Print enough to diagnose a broken boot without
+#    needing a shell first.
+# ---------------------------------------------------------------------------
+echo
+echo "========== ZHIYU BOOT REPORT =========="
+echo "model   : $(cat /proc/device-tree/model 2>/dev/null)"
+if [ -d /proc/device-tree/firmware/zhiyu-stock-overlay ]; then
+	echo "dtb     : ours (ABL stock-overlay sink present)"
+else
+	echo "dtb     : NOT ours (no zhiyu-stock-overlay sink)"
+fi
+echo "cmdline : $(tr '\0' ' ' < /proc/cmdline | cut -c1-100)"
+echo "udc     : $(ls /sys/class/udc/ 2>/dev/null | tr '\n' ' ')"
+echo "usb     : $usb_state"
+echo "drm     : $(ls /sys/class/drm/ 2>/dev/null | tr '\n' ' ')"
+echo "hosts   : $(ls /sys/class/mmc_host/ 2>/dev/null | tr '\n' ' ')"
+echo "blocks  : $(ls /dev/mmcblk* 2>/dev/null | tr '\n' ' ')"
+echo "--- last kernel messages ---"
+dmesg 2>/dev/null | tail -20
+echo "======================================="
+
+echo 'ZHIYU_CONSOLE_READY'
+while :; do
+	setsid cttyhack /bin/sh
+	sleep 1
+done
