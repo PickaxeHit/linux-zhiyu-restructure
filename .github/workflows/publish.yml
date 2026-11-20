@@ -90,6 +90,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # Boot images are per-generation artifacts now; keep them out of
+          # the repositories and their indexes.
+          rm -f out/pkgs/linux-zhiyu-images_* out/pkgs/linux-zhiyu-images-*
           scripts/mkrepos.sh debian out/pkgs out/repositories
           scripts/mkrepos.sh archlinuxarm out/pkgs out/repositories
           for distro in debian archlinuxarm; do
@@ -99,16 +102,14 @@ jobs:
                 tag=repo-apt
                 package_suffix=.deb
                 packages=("$dir"/*.deb)
-            packages=($(printf '%s\n' "${packages[@]}" | grep -v -- '/linux-zhiyu-images_'))
                 indexes=("$dir/Packages" "$dir/Packages.gz" "$dir/Release")
                 # Debian carries both libcamera ABIs.
-                expected=5
+                expected=6
                 ;;
               archlinuxarm)
                 tag=repo-pacman
                 package_suffix=.pkg.tar.zst
                 packages=("$dir"/*.pkg.tar.zst)
-            packages=($(printf '%s\n' "${packages[@]}" | grep -v -- '/linux-zhiyu-images-'))
                 indexes=("$dir/zhiyu.files" "$dir/zhiyu.db")
                 # Arch only carries the 0.7 ABI.
                 expected=5
