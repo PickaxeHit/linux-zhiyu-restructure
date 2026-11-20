@@ -60,8 +60,8 @@
   # shipped, and SSH password login stays available for that first login.
   users.users.pickaxehit = {
     isNormalUser = true;
-    # The image is built by CI, which substitutes its own password here.
-    initialPassword = "nixos";
+    # No password is shipped: set one at installation time (passwd) or log in
+    # with an SSH key.  CI no longer substitutes a known default here.
     extraGroups = [
       "wheel"
       "networkmanager"

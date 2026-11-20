@@ -173,24 +173,20 @@ in
     # hexagonrpcd serves a file tree to the ADSP and writes the sensor
     # registry into it, so the root has to be writable.  The read-only data
     # comes from the store, the registry directory is owned by fastrpc.
-    systemd.services.zhiyu-qcom-data = {
-      description = "Populate the writable SNS data root for hexagonrpcd";
-      wantedBy = [ "multi-user.target" ];
-      before = [
-        "hexagonrpcd-adsp-rootpd.service"
-        "hexagonrpcd-adsp-sensorspd.service"
-      ];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        ExecStart = pkgs.writeShellScript "zhiyu-qcom-data" ''
-          set -e
-          install -d -m 0755 /var/lib/qcom/sensors
-          cp -a --no-preserve=ownership --no-clobber             ${qcomSensors}/share/qcom/sensors/config /var/lib/qcom/sensors/
-          cp -a --no-preserve=ownership --no-clobber             ${qcomSensors}/share/qcom/sensors/sns_reg.conf /var/lib/qcom/sensors/
-          install -d -o fastrpc -g fastrpc -m 0755 /var/lib/qcom/sensors/registry
-        '';
+    # Read-only SNS data follows the generation; only the registry directory
+    # stays writable, and it lives outside the generation so it survives
+    # upgrades.
+    systemd.tmpfiles.settings."10-zhiyu-sns" = {
+      "/var/lib/qcom/sensors/registry".d = {
+        mode = "0755";
+        user = "fastrpc";
+        group = "fastrpc";
       };
+      "/var/lib/zhiyu-qcom/sensors".d.mode = "0755";
+      "/var/lib/zhiyu-qcom/sensors/config"."L+".argument = "${qcomSensors}/share/qcom/sensors/config";
+      "/var/lib/zhiyu-qcom/sensors/sns_reg.conf"."L+".argument =
+        "${qcomSensors}/share/qcom/sensors/sns_reg.conf";
+      "/var/lib/zhiyu-qcom/sensors/registry"."L+".argument = "/var/lib/qcom/sensors/registry";
     };
 
     systemd.services.hexagonrpcd-adsp-rootpd = {
@@ -202,12 +198,13 @@ in
         "!/dev/fastrpc-sdsp"
         "/dev/fastrpc-adsp"
       ];
-      requires = [ "zhiyu-qcom-data.service" ];
-      after = [ "zhiyu-qcom-data.service" ];
+      requires = [ "systemd-tmpfiles-setup.service" ];
+      after = [ "systemd-tmpfiles-setup.service" ];
+      restartTriggers = [ qcomSensors ];
       serviceConfig = {
         User = "fastrpc";
         Group = "fastrpc";
-        ExecStart = "${pkgs.hexagonrpc}/bin/hexagonrpcd -f /dev/fastrpc-adsp -d adsp -R /var/lib/qcom";
+        ExecStart = "${pkgs.hexagonrpc}/bin/hexagonrpcd -f /dev/fastrpc-adsp -d adsp -R /var/lib/zhiyu-qcom";
         Restart = "always";
         RestartSec = 3;
       };
@@ -221,12 +218,13 @@ in
         "!/dev/fastrpc-sdsp"
         "/dev/fastrpc-adsp"
       ];
-      requires = [ "zhiyu-qcom-data.service" ];
-      after = [ "zhiyu-qcom-data.service" ];
+      requires = [ "systemd-tmpfiles-setup.service" ];
+      after = [ "systemd-tmpfiles-setup.service" ];
+      restartTriggers = [ qcomSensors ];
       serviceConfig = {
         User = "fastrpc";
         Group = "fastrpc";
-        ExecStart = "${pkgs.hexagonrpc}/bin/hexagonrpcd -f /dev/fastrpc-adsp -d adsp -s -R /var/lib/qcom";
+        ExecStart = "${pkgs.hexagonrpc}/bin/hexagonrpcd -f /dev/fastrpc-adsp -d adsp -s -R /var/lib/zhiyu-qcom";
         Restart = "always";
         RestartSec = 3;
       };
