@@ -189,3 +189,5 @@ jobs:
         run: |
           sudo apt-get install -y createrepo-c
           scripts/publish-fedora-rpms.sh out/fedora-rpms "$build_sha"
+
+# Re-register this workflow after the repository was created.

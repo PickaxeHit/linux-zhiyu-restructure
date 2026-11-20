@@ -435,3 +435,5 @@ jobs:
       actions: read
       contents: write
     uses: ./.github/workflows/publish.yml
+
+# Re-register this workflow after the repository was created.
