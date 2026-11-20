@@ -43,6 +43,11 @@ jobs:
           primary-key: nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-${{ runner.arch }}-
 
+      - name: Publish the firmware blob archive if needed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/publish-firmware-blobs.sh
+
       - name: Validate the sources lock
         run: python3 scripts/gen-sources-lock.py --check
 
@@ -57,14 +62,23 @@ jobs:
           ls -l dist
 
       - name: Build cache targets
+        env:
+          NIX_CACHE_PRIVATE_KEY: ${{ secrets.NIX_CACHE_PRIVATE_KEY }}
         run: |
           set -euo pipefail
           mkdir -p cache
           paths=$(nix build \
             .#kernel .#initramfs .#keymint .#firmware .#dts \
-            .#zhiyu-install .#sensh .#sensord \
+            .#libcamera-zhiyu .#zhiyu-install .#sensh .#sensord \
             .#qcomVaDriver .#qcomSensors .#zhiyu-ucm2 .#udevRules \
+            .#zhiyu-images \
             --print-out-paths)
+          if [ -n "${NIX_CACHE_PRIVATE_KEY:-}" ]; then
+            printf '%s' "$NIX_CACHE_PRIVATE_KEY" > "$RUNNER_TEMP/cache.key"
+            nix store sign --key-file "$RUNNER_TEMP/cache.key" -r $paths
+          else
+            echo "::warning::NIX_CACHE_PRIVATE_KEY is not set; the cache will be unsigned"
+          fi
           nix copy --to "file://$PWD/cache" $paths
           du -sh cache
           ls cache/nar | wc -l

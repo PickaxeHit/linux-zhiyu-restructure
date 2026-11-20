@@ -8,12 +8,19 @@
   lib,
   stdenv,
   fetchFromGitHub,
+  fetchzip,
   sources,
   m4,
   alsa-utils,
 }:
 
 let
+  # Firmware and SNS blobs are fetched from the content-addressed archive in
+  # the lock, so they are not part of a lightweight checkout.
+  firmwareBlobs = fetchzip {
+    inherit (sources.firmware-blobs) url hash;
+  };
+
   # The topology's entry point includes the vendor tree ("audioreach/...",
   # "util/..."), pinned in metadata/sources.lock.json.
   audioreach = fetchFromGitHub {
@@ -38,7 +45,7 @@ stdenv.mkDerivation {
 
   buildCommand = ''
     mkdir -p $out/lib/firmware
-    cp -a ${../initramfs-src/blobs/firmware}/. $out/lib/firmware/
+    cp -a ${firmwareBlobs}/firmware/. $out/lib/firmware/
     # cp -a copies the store's read-only mode along with the files, and
     # alsatplg writes the topology into this tree below.
     chmod -R u+w $out/lib/firmware

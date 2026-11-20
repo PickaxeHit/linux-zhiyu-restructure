@@ -1,11 +1,18 @@
-# SNS configuration and registry that hexagonrpcd serves to the ADSP.  The
-# repository keeps them next to the firmware blobs; CI installs the same files
-# under /usr/share/qcom in the distro rootfs packages.
+# SNS configuration and registry that hexagonrpcd serves to the ADSP.  They
+# come from the same firmware-blobs archive as the firmware, so the
+# lightweight nix-stable branch does not need the blobs in the tree.
 {
   lib,
   stdenv,
+  fetchzip,
+  sources,
 }:
 
+let
+  firmwareBlobs = fetchzip {
+    inherit (sources.firmware-blobs) url hash;
+  };
+in
 stdenv.mkDerivation {
   pname = "qcom-sensors";
   version = "1";
@@ -14,7 +21,7 @@ stdenv.mkDerivation {
 
   installPhase = ''
     install -d $out/share/qcom/sensors
-    cp -a ${../initramfs-src/blobs/sensors}/. $out/share/qcom/sensors/
+    cp -a ${firmwareBlobs}/sensors/. $out/share/qcom/sensors/
   '';
 
   meta = {

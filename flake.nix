@@ -22,6 +22,7 @@
           kernel = pkgs.callPackage ./nix/kernel.nix { inherit sources; };
           keymint = pkgs.callPackage ./nix/keymint.nix { inherit sources; };
           sensh = pkgs.callPackage ./nix/sensh.nix { inherit sources; };
+          libcamera-zhiyu = pkgs.callPackage ./nix/libcamera.nix { inherit sources; };
           sensord = pkgs.callPackage ./nix/sensord.nix { inherit sensh; };
 
           firmware = pkgs.callPackage ./nix/firmware.nix { inherit sources; };
@@ -29,7 +30,7 @@
           ucm2 = pkgs.callPackage ./nix/ucm2.nix { };
           flasher = pkgs.callPackage ./nix/flasher.nix { };
           qcomVaDriver = pkgs.callPackage ./nix/qcom-va-driver.nix { inherit sources; };
-          qcomSensors = pkgs.callPackage ./nix/qcom-sensors.nix { };
+          qcomSensors = pkgs.callPackage ./nix/qcom-sensors.nix { inherit sources; };
 
           dts = pkgs.callPackage ./nix/dts.nix {
             inherit kernel;
@@ -52,6 +53,7 @@
             keymint
             firmware
             initramfs
+            libcamera-zhiyu
             sensh
             sensord
             udevRules

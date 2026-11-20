@@ -24,6 +24,8 @@ git -C "$work/tree" checkout --orphan "$branch"
 git -C "$work/tree" rm -rf --cached . >/dev/null 2>&1 || true
 find "$work/tree" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
 git -C "$root" archive --format=tar "$rev" -- "${paths[@]}" | tar -x -C "$work/tree"
+# The firmware/SNS blobs are fetched from their content-addressed archive.
+rm -rf "$work/tree/initramfs-src/blobs"
 git -C "$work/tree" add -A
 git -C "$work/tree" -c user.name=github-actions\[bot\] \
     -c user.email=41898282+github-actions\[bot\]@users.noreply.github.com \

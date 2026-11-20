@@ -48,7 +48,7 @@ let
   udevRules = pkgs.callPackage ./udev-rules.nix { };
   dbusPolicy = pkgs.callPackage ./sensord-dbus.nix { };
   qcomVaDriver = pkgs.callPackage ./qcom-va-driver.nix { inherit sources; };
-  qcomSensors = pkgs.callPackage ./qcom-sensors.nix { };
+  qcomSensors = pkgs.callPackage ./qcom-sensors.nix { inherit sources; };
 
   dtb = pkgs.callPackage ./dts.nix {
     inherit kernel;

@@ -5,6 +5,11 @@
     "repo": "audioreach-topology",
     "rev": "d6bb205aca5f4b8fa6b2f44cf8b5f6a081cbf037"
   },
+  "firmware-blobs": {
+    "hash": "sha256-KkLiyFXuLcWREAa0JilGWOSdbdtepweLiBG5d32E+0o=",
+    "sha256": "a50ee4a8ca75c4dc8e522f488b005e275241ef09ffa6e88e0216867afb9c5c43",
+    "url": "https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/firmware-sources/zhiyu-firmware-blobs-a50ee4a8ca75c4dc.tar.gz"
+  },
   "idlc": {
     "hash": "sha256-zKQUF2FeKDkX5jymiAZ220WmvwK6Yv3qfzBa/ionySQ=",
     "owner": "quic",

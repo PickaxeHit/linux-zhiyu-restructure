@@ -14,11 +14,14 @@ Usage:
     scripts/gen-sources-lock.py --check   # fail if it is out of date
 """
 import argparse
+import hashlib
 import json
+import os
 import pathlib
 import re
 import subprocess
 import sys
+import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SOURCES = ROOT / "metadata" / "sources.json"
@@ -79,6 +82,27 @@ def meson_version(source):
     return m.group(1)
 
 
+FIRMWARE_TAG = "firmware-sources"
+
+
+def firmware_blobs_entry():
+    repo = os.environ.get("GITHUB_REPOSITORY", "PickaxeHit/linux-zhiyu-restructure")
+    with tempfile.TemporaryDirectory() as tmp:
+        archive = pathlib.Path(tmp) / "blobs.tar.gz"
+        run(["bash", str(ROOT / "scripts" / "make-firmware-archive.sh"), str(archive)])
+        file_hash = hashlib.sha256(archive.read_bytes()).hexdigest()
+        tree = pathlib.Path(tmp) / "tree"
+        tree.mkdir()
+        run(["tar", "-xzf", str(archive), "-C", str(tree)])
+        tree_hash = run(["nix", "hash", "path", "--sri", str(tree)])
+    name = f"zhiyu-firmware-blobs-{file_hash[:16]}.tar.gz"
+    return {
+        "url": f"https://github.com/{repo}/releases/download/{FIRMWARE_TAG}/{name}",
+        "hash": tree_hash,
+        "sha256": file_hash,
+    }
+
+
 def build_lock():
     sources = json.loads(SOURCES.read_text())
     lock = {}
@@ -98,6 +122,8 @@ def build_lock():
         else:
             entry["version"] = meson_version(store)
         lock[name] = entry
+
+    lock["firmware-blobs"] = firmware_blobs_entry()
 
     for name, source in sources.items():
         if name in ("avb", "mkbootimg", "busybox", "f2fs-tools", "hexagonrpc"):
