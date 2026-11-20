@@ -1,0 +1,61 @@
+name: Nix build
+
+# Builds the boot chain from the Nix definitions in this repository, natively
+# on an aarch64 runner. The NixOS system configuration is not built here: it
+# needs the full (large) stock closure, which is a separate, user-side build.
+
+on:
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: Nix build jobs
+        default: "4"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nix-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 240
+    steps:
+      - name: Checkout linux-zhiyu
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            max-jobs = ${{ inputs.jobs }}
+            cores = 4
+
+      - name: Restore Nix store cache
+        uses: nix-community/cache-nix-action@v6
+        with:
+          primary-key: nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Build images and flasher
+        run: |
+          set -euo pipefail
+          nix build .#zhiyu-images --out-link result-images --print-out-paths
+          nix build .#zhiyu-install --out-link result-install --print-out-paths
+          mkdir -p dist
+          cp -aL result-images/*.img dist/
+          sha256sum dist/*.img > dist/SHA256SUMS
+          ls -l dist
+
+      - name: Upload images
+        uses: actions/upload-artifact@v4
+        with:
+          name: nix-images
+          path: dist/
+          if-no-files-found: error
