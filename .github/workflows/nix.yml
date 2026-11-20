@@ -47,13 +47,14 @@ jobs:
         run: python3 scripts/gen-sources-lock.py --check
 
       - name: Materialize the nix-stable tree
-        run: scripts/make-nix-stable.sh nix-stable
+        run: scripts/make-nix-stable.sh "$RUNNER_TEMP/nix-stable"
 
       - name: Build images and flasher
         run: |
           set -euo pipefail
-          nix build ./nix-stable#zhiyu-images --out-link result-images --print-out-paths
-          nix build ./nix-stable#zhiyu-install --out-link result-install --print-out-paths
+          root="$RUNNER_TEMP/nix-stable"
+          nix build "$root#zhiyu-images" --out-link result-images --print-out-paths
+          nix build "$root#zhiyu-install" --out-link result-install --print-out-paths
           mkdir -p dist
           cp -aL result-images/*.img dist/
           sha256sum dist/*.img > dist/SHA256SUMS
@@ -65,12 +66,13 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p cache
+          root="$RUNNER_TEMP/nix-stable"
           paths=$(nix build \
-            ./nix-stable#kernel ./nix-stable#initramfs ./nix-stable#keymint \
-            ./nix-stable#firmware ./nix-stable#dts ./nix-stable#libcamera-zhiyu \
-            ./nix-stable#zhiyu-install ./nix-stable#sensh ./nix-stable#sensord \
-            ./nix-stable#qcomVaDriver ./nix-stable#qcomSensors \
-            ./nix-stable#zhiyu-ucm2 ./nix-stable#udevRules ./nix-stable#zhiyu-images \
+            "$root#kernel" "$root#initramfs" "$root#keymint" \
+            "$root#firmware" "$root#dts" "$root#libcamera-zhiyu" \
+            "$root#zhiyu-install" "$root#sensh" "$root#sensord" \
+            "$root#qcomVaDriver" "$root#qcomSensors" \
+            "$root#zhiyu-ucm2" "$root#udevRules" "$root#zhiyu-images" \
             --print-out-paths)
           if [ -n "${NIX_CACHE_PRIVATE_KEY:-}" ]; then
             printf '%s' "$NIX_CACHE_PRIVATE_KEY" > "$RUNNER_TEMP/cache.key"
@@ -88,7 +90,7 @@ jobs:
         run: scripts/publish-nix-cache.sh cache "nix-cache-${{ github.run_id }}"
 
       - name: Update the nix-stable branch
-        run: scripts/make-nix-stable.sh nix-stable --push
+        run: scripts/make-nix-stable.sh "$RUNNER_TEMP/nix-stable" --push
 
       - name: Upload images
         uses: actions/upload-artifact@v4
