@@ -104,6 +104,16 @@ in
       '';
     };
 
+    camera.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Install the zhiyu libcamera fork (simple pipeline, EGL debayer, CDAF)
+        and redirect its stock libcamera consumers to it with
+        system.replaceDependencies.
+      '';
+    };
+
     sensord.enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -116,6 +126,17 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    nixpkgs.overlays = lib.optional cfg.camera.enable (
+      final: prev: {
+        libcamera-zhiyu = prev.callPackage ./libcamera.nix {
+          sources = sources;
+        };
+      }
+    );
+    system.replaceDependencies.replacements = lib.optional cfg.camera.enable {
+      oldDependency = pkgs.libcamera;
+      newDependency = pkgs.libcamera-zhiyu;
+    };
     # The running kernel must be the one NixOS thinks it booted, otherwise
     # /run/booted-system/kernel-modules points at a different version and
     # udev/boot.kernelModules load nothing.
@@ -275,6 +296,10 @@ in
 
     assertions = [
       {
+        assertion = !cfg.camera.enable || pkgs.libcamera.version == "0.7.2";
+        message = "zhiyu: libcamera-zhiyu is pinned to 0.7.2; update the fork and check the ABI";
+      }
+      {
         assertion = lib.versionAtLeast pkgs.mesa.version "26";
         message = "zhiyu: Mesa 26 or newer is required for the Freedreno/Rusticl stack";
       }
@@ -301,7 +326,8 @@ in
     environment.systemPackages = [
       flasher
       pkgs.qbootctl
-    ];
+    ]
+    ++ lib.optionals cfg.camera.enable [ pkgs.libcamera-zhiyu ];
 
     boot.loader.external = lib.mkIf cfg.flashOnSwitch {
       enable = true;
