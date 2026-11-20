@@ -13,13 +13,16 @@ out=${OUT:-$here/sm8750-tplg.bin}
 entry=${ENTRY:-Zhiyu-vendorprops.m4}
 M4=${M4:-m4}
 ALSATPLG=${ALSATPLG:-alsatplg}
-revision=$(cat "$here/VENDOR-COMMIT.txt")
+metadata() { python3 "$here/../../scripts/metadata.py" get "$1" "$2"; }
+revision=$(metadata audioreach rev)
+checksum=$(metadata audioreach archive_sha256)
 vendor="$here/../.sources/audioreach-$revision"
 
 die() { echo "tplg/build.sh: $*" >&2; exit 1; }
 command -v "$ALSATPLG" >/dev/null || die "alsatplg not found (alsa-utils)"
-bash "$here/../fetch-source.sh" "https://codeload.github.com/linux-msm/audioreach-topology/tar.gz/$revision" \
-	41532ad929058c9b046269c5b85d7b845d0b67a8402ae8982f30231088211549 "$vendor"
+bash "$here/../fetch-source.sh" \
+	"https://codeload.github.com/linux-msm/audioreach-topology/tar.gz/$revision" \
+	"$checksum" "$vendor"
 
 cd "$here"
 conf=$(mktemp "$here/.tplg.XXXXXX.conf")

@@ -57,3 +57,9 @@
 https://github.com/yzddmr6/xiaomipad-8pro-mainline
 
 https://github.com/KunBuFenZi/progt13-ubuntu
+
+### 源码与版本管理
+* 自己长期维护的 fork 用 submodule 固定 commit：`kernel-source`、`libcamera/0.7`、`libcamera/0.8`。主仓库的 gitlink 就是这些组件的版本，不再在构建时拉取分支最新版。
+* 其余第三方源码固定记录在 `metadata/sources.json`（git commit 或 tarball 的 version + SHA256）。这个文件只由人工修改，主分支是唯一权威来源；构建脚本只读取它，不再各自硬编码版本，也没有任何自动更新版本的 CI。
+* `scripts/metadata.py verify` 校验 metadata 格式，CI 构建前和本地 `build.sh` 开头都会执行。
+* 本地初始化源码：只做用户空间或 Nix 工作时拉取小的子模块即可：`git submodule update --init --depth 1 libcamera/0.7 libcamera/0.8`；需要构建内核时再执行 `git submodule update --init --depth 1 kernel-source`（内核子模块较大，不要在只需要元数据时拉取）。

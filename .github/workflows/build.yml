@@ -6,7 +6,7 @@ name: Build images and packages
 #     boot critical ones also live in the vendor ramdisk)
 #   - linux-zhiyu-headers: a prepared tree for out-of-tree module builds
 #   - linux-zhiyu-firmware: the board blobs plus the built AudioReach topology
-#   - libcamera (cloned from the zhiyu fork at build time: per-release branches)
+#   - libcamera (the 0.7 and 0.8 fork branches are pinned submodules)
 #   - sensord (SensorProxy daemon backed by sensh/SNS Client)
 # Everything is packaged as both Debian (.deb) and Arch (.pkg.tar.zst) so any
 # of the rootfs images can install it.
@@ -73,41 +73,7 @@ jobs:
             libudev-dev libdrm-dev libevent-dev libyaml-dev libjpeg-dev \
             libglib2.0-dev python3-jinja2 python3-ply python3-yaml \
             qt6-base-dev libgl1-mesa-dev
-          # Ubuntu's mkbootimg package ships the script without the gki module
-          # it imports ("ModuleNotFoundError: No module named 'gki'"), so use
-          # the AOSP tree directly: its script finds gki/ next to itself.
-          sudo git clone --depth 1 \
-            https://android.googlesource.com/platform/system/tools/mkbootimg \
-            /usr/local/lib/mkbootimg
-          sudo tee /usr/bin/mkbootimg >/dev/null <<'EOF'
-          #!/bin/sh
-          exec python3 /usr/local/lib/mkbootimg/mkbootimg.py "$@"
-          EOF
-          sudo chmod 755 /usr/bin/mkbootimg
-
-          # Ubuntu has no avbtool package (and android-tools-mkbootimg was
-          # replaced by mkbootimg); the AOSP script is what the image scripts
-          # expect at /usr/bin/avbtool.
-          # The ?format=TEXT download of avbtool 404s; clone the tree the same
-          # way as mkbootimg.  Note that the old version of this step left an
-          # empty /usr/bin/avbtool behind, so check for a working one.
-          if ! avbtool version >/dev/null 2>&1; then
-            sudo rm -f /usr/bin/avbtool
-            sudo git clone --depth 1 \
-              https://android.googlesource.com/platform/external/avb \
-              /usr/local/lib/avb
-            if [ -f /usr/local/lib/avb/avbtool.py ]; then
-              AVB=/usr/local/lib/avb/avbtool.py
-            else
-              AVB=$(sudo find /usr/local/lib/avb -maxdepth 1 -name 'avbtool*' ! -name '*test*' | head -1)
-            fi
-            test -n "$AVB" || { echo "avbtool not found in avb tree" >&2; exit 1; }
-            echo "avbtool script: $AVB"
-            printf '#!/bin/sh\nexec python3 %s "$@"\n' "$AVB" | sudo tee /usr/bin/avbtool >/dev/null
-            sudo chmod 755 /usr/bin/avbtool
-          fi
-          command -v mkbootimg avbtool dtc clang ld.lld
-          avbtool version
+          command -v dtc clang ld.lld
           clang --version | head -1
           df -h /
 
@@ -120,15 +86,51 @@ jobs:
           lfs: true
           fetch-depth: 1
 
+      - name: Install pinned mkbootimg and avbtool
+        run: |
+          set -euo pipefail
+          # The AOSP trees are pinned in metadata/sources.json; the scripts at
+          # /usr/bin are the thin wrappers the image build expects.
+          clone_pinned() {
+            name=$1 url=$2 rev=$3 commit=$4 dest=$5
+            sudo git clone --quiet --depth 1 --branch "$rev" "$url" "$dest"
+            test "$(git -C "$dest" rev-parse HEAD)" = "$commit" || {
+              echo "::error::$name: expected $commit, got $(git -C "$dest" rev-parse HEAD)" >&2
+              exit 1
+            }
+          }
+          clone_pinned mkbootimg \
+            "$(python3 scripts/metadata.py get mkbootimg url)" \
+            "$(python3 scripts/metadata.py get mkbootimg rev)" \
+            "$(python3 scripts/metadata.py get mkbootimg commit)" \
+            /usr/local/lib/mkbootimg
+          clone_pinned avb \
+            "$(python3 scripts/metadata.py get avb url)" \
+            "$(python3 scripts/metadata.py get avb rev)" \
+            "$(python3 scripts/metadata.py get avb commit)" \
+            /usr/local/lib/avb
+          sudo tee /usr/bin/mkbootimg >/dev/null <<'EOF'
+          #!/bin/sh
+          exec python3 /usr/local/lib/mkbootimg/mkbootimg.py "$@"
+          EOF
+          AVB=$(find /usr/local/lib/avb -maxdepth 1 -name 'avbtool*' ! -name '*test*' | head -1)
+          test -n "$AVB"
+          printf '#!/bin/sh\nexec python3 %s "$@"\n' "$AVB" | sudo tee /usr/bin/avbtool >/dev/null
+          sudo chmod 755 /usr/bin/mkbootimg /usr/bin/avbtool
+          avbtool version
+          mkbootimg --help >/dev/null 2>&1 || true
+
+      - name: Validate source metadata
+        run: python3 scripts/metadata.py verify
+
       - name: Initialize pinned submodules
         id: kernel
         run: |
           set -euo pipefail
-          if ! git submodule update --init --recursive --depth 1; then
-            echo "::warning::Shallow submodule checkout failed; retrying with full history"
-            git submodule foreach --recursive 'if [ "$(git rev-parse --is-shallow-repository)" = true ]; then git fetch --unshallow origin; fi'
-            git submodule update --init --recursive
-          fi
+          # Shallow clones only: the kernel tree is large and the exact commit
+          # is the gitlink, so a full-history fallback would only waste
+          # traffic.  A broken shallow fetch is reported as an error instead.
+          git submodule update --init --recursive --depth 1 --jobs 4
           echo "sha=$(git -C kernel-source rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Restore kernel build tree
@@ -320,12 +322,16 @@ jobs:
           #
           # Note: no comment lines inside the PKG_* backslash chain below,
           # they terminate it.
-          for entry in "0.7 zhiyu-0.7.2 deb arch" "0.8 zhiyu-0.8.0 deb"; do
-            read -r soname branch formats <<< "$entry"
-            src=src/libcamera-$soname
+          for entry in "0.7 deb arch" "0.8 deb"; do
+            read -r soname formats <<< "$entry"
+            src=libcamera/$soname
             build=out/libcamera-$soname
             stage=stage/libcamera-$soname
-            bash scripts/fetch-libcamera.sh "$branch" "$src"
+            test -d "$src" || {
+              echo "::error::libcamera/$soname submodule is not initialized" >&2
+              exit 1
+            }
+            git -C "$src" rev-parse --verify HEAD >/dev/null
             meson setup "$build" "$src" --buildtype=release --prefix=/usr --libdir=lib $LC_OPTIONS
             meson compile -C "$build"
             DESTDIR="$PWD/$stage" meson install -C "$build" --no-rebuild

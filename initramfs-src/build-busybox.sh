@@ -2,7 +2,10 @@
 # Build a static aarch64 BusyBox from the pinned upstream release.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
-read -r version checksum < "$here/BUSYBOX-RELEASE.txt"
+metadata() { python3 "$here/../scripts/metadata.py" get "$1" "$2"; }
+version=$(metadata busybox version)
+checksum=$(metadata busybox sha256)
+url=$(metadata busybox url)
 src=${BB_SRC:-$here/.sources/busybox-$version}
 out=${BB_OUT:-$src/busybox}
 jobs=${JOBS:-$(nproc)}
@@ -11,8 +14,7 @@ CROSS=${CROSS_COMPILE:-aarch64-linux-gnu-}
 die() { echo "build-busybox.sh: $*" >&2; exit 1; }
 
 if [ -z "${BB_SRC:-}" ]; then
-	bash "$here/fetch-source.sh" "https://busybox.net/downloads/busybox-$version.tar.bz2" \
-		"$checksum" "$src"
+	bash "$here/fetch-source.sh" "$url" "$checksum" "$src"
 fi
 [ -f "$src/Makefile" ] || die "BusyBox source is missing: $src"
 cd "$src"

@@ -7,7 +7,10 @@
 # only place where they can be cleared is here, before the rw mount.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
-read -r version checksum < "$here/F2FS-TOOLS-RELEASE.txt"
+metadata() { python3 "$here/../scripts/metadata.py" get "$1" "$2"; }
+version=$(metadata f2fs-tools version)
+checksum=$(metadata f2fs-tools sha256)
+url=$(metadata f2fs-tools url)
 src=${F2FS_SRC:-$here/.sources/f2fs-tools-$version}
 out=${F2FS_OUT:-$here/blobs/fsck.f2fs}
 jobs=${JOBS:-$(nproc)}
@@ -17,9 +20,7 @@ cc=${CROSS}gcc
 die() { echo "build-fsck.sh: $*" >&2; exit 1; }
 
 if [ -z "${F2FS_SRC:-}" ]; then
-	bash "$here/fetch-source.sh" \
-		"https://deb.debian.org/debian/pool/main/f/f2fs-tools/f2fs-tools_$version.orig.tar.xz" \
-		"$checksum" "$src"
+	bash "$here/fetch-source.sh" "$url" "$checksum" "$src"
 fi
 [ -f "$src/configure.ac" ] || die "f2fs-tools source is missing: $src"
 cd "$src"

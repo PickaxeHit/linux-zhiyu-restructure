@@ -6,6 +6,7 @@
 #   VER   `uname -r` of the result (default: <kernel version>-zhiyu+)
 set -euo pipefail
 root=$(cd "$(dirname "$0")" && pwd)
+python3 "$root/scripts/metadata.py" verify
 KS=${KS:-$root/kernel-source}
 JOBS=${JOBS:-$(nproc)}
 

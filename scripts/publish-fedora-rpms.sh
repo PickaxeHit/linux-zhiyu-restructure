@@ -11,7 +11,7 @@ trap 'git worktree remove --force "$work/tree" 2>/dev/null || true; rm -rf "$wor
 
 upstream_packages=(hexagonrpc)
 # Manually selected build artifacts may predate the sensh package.
-if git cat-file -e "$sha:scripts/sensh-revision" 2>/dev/null; then
+if git cat-file -e "$sha:metadata/sources.json" 2>/dev/null; then
     upstream_packages+=(sensh)
 fi
 names=(linux-zhiyu-modules linux-zhiyu-headers linux-zhiyu-firmware linux-zhiyu-images

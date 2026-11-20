@@ -1,0 +1,69 @@
+{
+  "audioreach": {
+    "archive_sha256": "41532ad929058c9b046269c5b85d7b845d0b67a8402ae8982f30231088211549",
+    "rev": "d6bb205aca5f4b8fa6b2f44cf8b5f6a081cbf037",
+    "type": "git",
+    "url": "https://github.com/linux-msm/audioreach-topology.git"
+  },
+  "avb": {
+    "commit": "25a14f7e3e6493a7f1a42aa9f78209d4dbe848e9",
+    "rev": "android-15.0.0_r1",
+    "type": "git",
+    "url": "https://android.googlesource.com/platform/external/avb"
+  },
+  "busybox": {
+    "sha256": "34f9ea6ff8636f2c9241153b9114eefa9e65674a45318ae1ef95bb5f31c53bb2",
+    "type": "tarball",
+    "url": "https://busybox.net/downloads/busybox-1.38.0.tar.bz2",
+    "version": "1.38.0"
+  },
+  "f2fs-tools": {
+    "sha256": "fe25b17422f278e5fc0c6ae9977d814fe3122b5bc82dd92a58296fad57263d9c",
+    "type": "tarball",
+    "url": "https://deb.debian.org/debian/pool/main/f/f2fs-tools/f2fs-tools_1.16.0.orig.tar.xz",
+    "version": "1.16.0"
+  },
+  "hexagonrpc": {
+    "rev": "da7a3742ab8d5273a281b70ee11f16fb2cb6a690",
+    "type": "git",
+    "url": "https://github.com/linux-msm/hexagonrpc.git",
+    "version": "0.5.0"
+  },
+  "idlc": {
+    "rev": "95ebb8d6031dd2c8d3f6277e50edadee8a119d5b",
+    "type": "git",
+    "url": "https://github.com/quic/mink-idl-compiler.git"
+  },
+  "minkipc": {
+    "rev": "5e3c6951d13162a262ea65ea8e8351228f092b58",
+    "type": "git",
+    "url": "https://github.com/quic/minkipc.git"
+  },
+  "mkbootimg": {
+    "commit": "c40a04c0620c5a0dab87497857805b8d9b8a827a",
+    "rev": "android-15.0.0_r1",
+    "type": "git",
+    "url": "https://android.googlesource.com/platform/system/tools/mkbootimg"
+  },
+  "qcbor": {
+    "rev": "572a567d02bcfde42f5863f6a515131cc270798d",
+    "type": "git",
+    "url": "https://github.com/laurencelundblade/QCBOR.git"
+  },
+  "qcom-va-driver": {
+    "rev": "0980a1decf26d34c9aa71cd0a4a0d25703a7a17f",
+    "type": "git",
+    "url": "https://github.com/radxa-pkg/qcom-va-driver.git",
+    "version": "1.1.1"
+  },
+  "quic-teec": {
+    "rev": "736419e25a2036aac3292a10a93e394a90750ca3",
+    "type": "git",
+    "url": "https://github.com/quic/quic-teec.git"
+  },
+  "sensh": {
+    "rev": "560b48080283fe73ca5e67635b566177028cebc9",
+    "type": "git",
+    "url": "https://gitlab.com/flamingradian/sensh.git"
+  }
+}

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Run inside a Fedora 44 aarch64 container.
 set -euo pipefail
+root=$(cd "$(dirname "$0")/.." && pwd)
 dnf -y --setopt=install_weak_deps=False install rpm-build redhat-rpm-config gcc gcc-c++ make meson ninja-build git \
     python3-pyyaml python3-jinja2 python3-ply pkgconf-pkg-config \
     glib2-devel systemd-devel libdrm-devel libevent-devel libyaml-devel \
@@ -40,7 +41,7 @@ fi
 
 if [[ "${BUILD_USERSPACE:-false}" == true ]]; then
     dnf -y --setopt=install_weak_deps=False install qmic qrtr-devel protobuf-c-devel protobuf-c-compiler
-    sensh_revision=$(cat scripts/sensh-revision)
+    sensh_revision=$(python3 "$root/scripts/metadata.py" get sensh rev)
     mkdir -p out/sensh-source
     curl --fail --silent --show-error --location --retry 3 \
         "https://gitlab.com/flamingradian/sensh/-/archive/$sensh_revision/sensh-$sensh_revision.tar.gz" |
@@ -56,7 +57,7 @@ if [[ "${BUILD_USERSPACE:-false}" == true ]]; then
         PKG_DESC="Qualcomm Sensor Core diagnostic shell" \
         scripts/mkrpm.sh "$sensh_stage" out/rpms
 
-    hexagonrpc_revision=$(cat scripts/hexagonrpc-revision)
+    hexagonrpc_revision=$(python3 "$root/scripts/metadata.py" get hexagonrpc rev)
     mkdir -p out/hexagonrpc-source
     curl --fail --silent --show-error --location --retry 3 \
         "https://codeload.github.com/linux-msm/hexagonrpc/tar.gz/$hexagonrpc_revision" |
@@ -84,12 +85,14 @@ if [[ "${BUILD_USERSPACE:-false}" == true ]]; then
         PKG_LICENSE='GPL-3.0-or-later AND LGPL-3.0-or-later' \
         scripts/mkrpm.sh "$hexagonrpc_stage" out/rpms
 
-    # One branch per upstream release; Fedora carries both ABIs like Debian.
-    for entry in "0.7 zhiyu-0.7.2" "0.8 zhiyu-0.8.0"; do
-        read -r soname branch <<< "$entry"
-        bash scripts/fetch-libcamera.sh "$branch" "src/libcamera-$soname"
+    # Both ABIs are pinned submodules of this repository.
+    for soname in 0.7 0.8; do
+        test -d "libcamera/$soname" || {
+            echo "libcamera/$soname submodule is not initialized" >&2
+            exit 1
+        }
         # Use Fedora's native ABI and libdir for userspace binaries.
-        meson setup "out/fedora-camera-$soname" "src/libcamera-$soname" \
+        meson setup "out/fedora-camera-$soname" "libcamera/$soname" \
             --buildtype=release --prefix=/usr --libdir=lib64 \
             -Dwerror=false -Dqcam=enabled -Dpipelines=simple -Dgstreamer=disabled \
             -Dpycamera=disabled -Ddocumentation=disabled -Dcam=enabled -Dv4l2=enabled \
@@ -99,7 +102,7 @@ if [[ "${BUILD_USERSPACE:-false}" == true ]]; then
             meson install -C "out/fedora-camera-$soname" --no-rebuild
         version=$(meson introspect "out/fedora-camera-$soname" --projectinfo |
             python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')
-        LIBCAMERA_SOURCE="src/libcamera-$soname" \
+        LIBCAMERA_SOURCE="libcamera/$soname" \
             bash scripts/stage-license-notices.sh "stage/fedora-camera-$soname" libcamera-zhiyu
         PKG_NAME=libcamera-zhiyu PKG_VERSION="$version" \
             PKG_LICENSE='LGPL-2.1-or-later AND GPL-2.0-or-later AND MIT' \

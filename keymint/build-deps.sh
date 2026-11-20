@@ -18,10 +18,11 @@ fetch() {
  fi
  [ "$(git -C "$deps/$name" rev-parse HEAD)" = "$rev" ] || { echo "wrong revision: $name" >&2; exit 1; }
 }
-fetch qcbor https://github.com/laurencelundblade/QCBOR.git 572a567d02bcfde42f5863f6a515131cc270798d
-fetch quic-teec https://github.com/quic/quic-teec.git 736419e25a2036aac3292a10a93e394a90750ca3
-fetch minkipc https://github.com/quic/minkipc.git 5e3c6951d13162a262ea65ea8e8351228f092b58
-fetch idlc https://github.com/quic/mink-idl-compiler.git 95ebb8d6031dd2c8d3f6277e50edadee8a119d5b
+metadata() { python3 "$base/../scripts/metadata.py" get "$1" "$2"; }
+fetch qcbor "$(metadata qcbor url)" "$(metadata qcbor rev)"
+fetch quic-teec "$(metadata quic-teec url)" "$(metadata quic-teec rev)"
+fetch minkipc "$(metadata minkipc url)" "$(metadata minkipc rev)"
+fetch idlc "$(metadata idlc url)" "$(metadata idlc rev)"
 cp "$base/idlc.Cargo.lock" "$deps/idlc/Cargo.lock"
 cargo build --manifest-path "$deps/idlc/Cargo.toml" --release --locked -p idlc
 args=(-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 -DCMAKE_C_COMPILER="$cc"

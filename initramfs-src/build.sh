@@ -24,7 +24,7 @@ for cand in "${KS:-}" "$here/../kernel-source" /nosnap/gt13-port/linux/kernel-so
 done
 KS=${KS:-$here/../kernel-source}
 VER=${VER:-$(make -s -C "$KS" ARCH=arm64 kernelrelease)}
-read -r busybox_version _ < "$here/BUSYBOX-RELEASE.txt"
+busybox_version=$(python3 "$here/../scripts/metadata.py" get busybox version)
 BB=${BB_OUT:-${BB_SRC:-$here/.sources/busybox-$busybox_version}/busybox}
 
 die() { echo "build.sh: $*" >&2; exit 1; }
