@@ -13,7 +13,16 @@
 stdenv.mkDerivation {
   pname = "zhiyu-sensord";
   version = "unstable";
-  src = ../sensors;
+  src = builtins.path {
+    path = ../sensors;
+    name = "zhiyu-sensord-src";
+    filter =
+      path: type:
+      builtins.elem (baseNameOf path) [
+        "Makefile"
+        "sensord.c"
+      ];
+  };
 
   strictDeps = true;
 

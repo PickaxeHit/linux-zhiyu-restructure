@@ -76,42 +76,29 @@ def kernel_version(source):
 
 
 def meson_version(source):
-    m = re.search(r"version\s*:\s*'([^']+)'", (source / "meson.build").read_text())
+    m = re.search(r"\bversion\s*:\s*'([^']+)'", (source / "meson.build").read_text())
     if not m:
         raise SystemExit(f"gen-sources-lock: no version in {source}/meson.build")
     return m.group(1)
 
 
-FIRMWARE_TAG = "firmware-sources"
-
-
-def firmware_blobs_entry():
-    repo = os.environ.get("GITHUB_REPOSITORY", "PickaxeHit/linux-zhiyu-restructure")
-    with tempfile.TemporaryDirectory() as tmp:
-        archive = pathlib.Path(tmp) / "blobs.tar.gz"
-        run(["bash", str(ROOT / "scripts" / "make-firmware-archive.sh"), str(archive)])
-        file_hash = hashlib.sha256(archive.read_bytes()).hexdigest()
-        tree = pathlib.Path(tmp) / "tree"
-        tree.mkdir()
-        run(["tar", "-xzf", str(archive), "-C", str(tree)])
-        tree_hash = run(["nix", "hash", "path", "--sri", str(tree)])
-    name = f"zhiyu-firmware-blobs-{file_hash[:16]}.tar.gz"
-    return {
-        "url": f"https://github.com/{repo}/releases/download/{FIRMWARE_TAG}/{name}",
-        "hash": tree_hash,
-        "sha256": file_hash,
-    }
-
-
-def build_lock():
+def build_lock(only=None):
     sources = json.loads(SOURCES.read_text())
-    lock = {}
+    wanted = set(only) if only else None
+    lock = json.loads(LOCK.read_text()) if LOCK.exists() else {}
+    produced = set()
+
+    def want(name):
+        return wanted is None or name in wanted
 
     for name, path in (("kernel", "kernel-source"),
                        ("libcamera-0.7", "libcamera/0.7"),
                        ("libcamera-0.8", "libcamera/0.8")):
         url = run(["git", "-C", str(ROOT), "config", "-f", ".gitmodules",
                    f"--get", f"submodule.{path}.url"])
+        if not want(name):
+            produced.add(name)
+            continue
         owner, repo = github_parts(url)
         rev = gitlink(path)
         digest, store = prefetch_unpack(codeload(owner, repo, rev))
@@ -122,8 +109,7 @@ def build_lock():
         else:
             entry["version"] = meson_version(store)
         lock[name] = entry
-
-    lock["firmware-blobs"] = firmware_blobs_entry()
+        produced.add(name)
 
     for name, source in sources.items():
         if name in ("avb", "mkbootimg", "busybox", "f2fs-tools", "hexagonrpc"):
@@ -131,16 +117,24 @@ def build_lock():
             continue
         if source["type"] != "git":
             continue
+        if not want(name):
+            produced.add(name)
+            continue
         url, rev = source["url"], source["rev"]
         if "gitlab.com" in url:
             lock[name] = {"url": url, "rev": rev, "hash": prefetch_git(url, rev)}
+            produced.add(name)
             continue
         owner, repo = github_parts(url)
         digest, store = prefetch_unpack(codeload(owner, repo, rev))
         lock[name] = {"owner": owner, "repo": repo, "rev": rev, "hash": digest}
         if name == "qcom-va-driver":
             lock[name]["version"] = meson_version(store)
+        produced.add(name)
 
+    if wanted is None:
+        # Drop entries from older schemas that no longer have a source.
+        lock = {k: v for k, v in lock.items() if k in produced}
     return lock
 
 
@@ -148,9 +142,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true",
                         help="fail if metadata/sources.lock.json is out of date")
+    parser.add_argument("--only", action="append", metavar="NAME",
+                        help="refresh just this entry (keeps the rest of the lock)")
     args = parser.parse_args()
 
-    lock = build_lock()
+    lock = build_lock(args.only)
     text = json.dumps(lock, indent=2, sort_keys=True) + "\n"
     if args.check:
         if not LOCK.exists() or LOCK.read_text() != text:

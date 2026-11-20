@@ -23,6 +23,11 @@
     "url": "https://deb.debian.org/debian/pool/main/f/f2fs-tools/f2fs-tools_1.16.0.orig.tar.xz",
     "version": "1.16.0"
   },
+  "firmware": {
+    "rev": "2d2bafbeddb321be3b4a26ba3a9bf4fed7bb8985",
+    "type": "git",
+    "url": "https://github.com/PickaxeHit/linux-zhiyu-firmware.git"
+  },
   "hexagonrpc": {
     "rev": "da7a3742ab8d5273a281b70ee11f16fb2cb6a690",
     "type": "git",

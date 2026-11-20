@@ -4,15 +4,18 @@
 {
   lib,
   stdenv,
-  fetchzip,
+  fetchFromGitHub,
   sources,
 }:
 
 let
-  firmwareBlobs = fetchzip {
-    inherit (sources.firmware-blobs) url hash;
-    # The archive has two top-level directories (firmware, sensors).
-    stripRoot = false;
+  firmwareBlobs = fetchFromGitHub {
+    inherit (sources.firmware)
+      owner
+      repo
+      rev
+      hash
+      ;
   };
 in
 stdenv.mkDerivation {

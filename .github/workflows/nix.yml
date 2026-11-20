@@ -43,19 +43,17 @@ jobs:
           primary-key: nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-${{ runner.arch }}-
 
-      - name: Publish the firmware blob archive if needed
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: scripts/publish-firmware-blobs.sh
-
       - name: Validate the sources lock
         run: python3 scripts/gen-sources-lock.py --check
+
+      - name: Materialize the nix-stable tree
+        run: scripts/make-nix-stable.sh nix-stable
 
       - name: Build images and flasher
         run: |
           set -euo pipefail
-          nix build .#zhiyu-images --out-link result-images --print-out-paths
-          nix build .#zhiyu-install --out-link result-install --print-out-paths
+          nix build ./nix-stable#zhiyu-images --out-link result-images --print-out-paths
+          nix build ./nix-stable#zhiyu-install --out-link result-install --print-out-paths
           mkdir -p dist
           cp -aL result-images/*.img dist/
           sha256sum dist/*.img > dist/SHA256SUMS
@@ -68,10 +66,11 @@ jobs:
           set -euo pipefail
           mkdir -p cache
           paths=$(nix build \
-            .#kernel .#initramfs .#keymint .#firmware .#dts \
-            .#libcamera-zhiyu .#zhiyu-install .#sensh .#sensord \
-            .#qcomVaDriver .#qcomSensors .#zhiyu-ucm2 .#udevRules \
-            .#zhiyu-images \
+            ./nix-stable#kernel ./nix-stable#initramfs ./nix-stable#keymint \
+            ./nix-stable#firmware ./nix-stable#dts ./nix-stable#libcamera-zhiyu \
+            ./nix-stable#zhiyu-install ./nix-stable#sensh ./nix-stable#sensord \
+            ./nix-stable#qcomVaDriver ./nix-stable#qcomSensors \
+            ./nix-stable#zhiyu-ucm2 ./nix-stable#udevRules ./nix-stable#zhiyu-images \
             --print-out-paths)
           if [ -n "${NIX_CACHE_PRIVATE_KEY:-}" ]; then
             printf '%s' "$NIX_CACHE_PRIVATE_KEY" > "$RUNNER_TEMP/cache.key"
@@ -89,7 +88,7 @@ jobs:
         run: scripts/publish-nix-cache.sh cache "nix-cache-${{ github.run_id }}"
 
       - name: Update the nix-stable branch
-        run: scripts/make-nix-stable.sh
+        run: scripts/make-nix-stable.sh nix-stable --push
 
       - name: Upload images
         uses: actions/upload-artifact@v4
