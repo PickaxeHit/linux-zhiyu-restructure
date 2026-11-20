@@ -31,6 +31,9 @@ for name in "${names[@]}"; do
         test -f "${candidates[0]}"
     fi
 done
+# Boot images are per-generation artifacts now; keep them out of the
+# repository and its index.
+rm -f "$rpms"/linux-zhiyu-images-*.rpm
 createrepo_c --baseurl "$baseurl" "$rpms"
 
 git worktree add --detach "$work/tree" "$GITHUB_SHA"
