@@ -176,9 +176,11 @@ jobs:
             gh release upload "$tag" "$checksums" --clobber
             gh release edit "$tag" --prerelease=false --latest --notes-file image-release-notes.md
           else
-            gh release create "$tag" "${images[@]}" "$checksums" \
-              --latest --target "$build_sha" \
-              --title "Zhiyu signed boot images" --notes-file image-release-notes.md
+            gh api -X POST "repos/$GITHUB_REPOSITORY/releases" \
+              -f tag_name="$tag" -f target_commitish="$build_sha" \
+              -f name="Zhiyu signed boot images" -f make_latest=true \
+              -f body="$(cat image-release-notes.md)" >/dev/null
+            gh release upload "$tag" "${images[@]}" "$checksums" --clobber
           fi
 
 

@@ -37,9 +37,11 @@ echo "cache: $kept object(s) to publish, $dropped already in cache.nixos.org"
 if gh release view "$tag" >/dev/null 2>&1; then
     gh release upload "$tag" "$cache"/nar/* --clobber
 else
-    gh release create "$tag" "$cache"/nar/* --latest=false \
-        --title "Nix cache $(date -u +%Y-%m-%d)" \
-        --notes "NAR files for the nix-repodata substituter index."
+    gh api -X POST "repos/$GITHUB_REPOSITORY/releases" \
+        -f tag_name="$tag" -f name="Nix cache $(date -u +%Y-%m-%d)" \
+        -f body="NAR files for the nix-repodata substituter index." \
+        -f make_latest=false >/dev/null
+    gh release upload "$tag" "$cache"/nar/* --clobber
 fi
 
 root=$(cd "$(dirname "$0")/.." && pwd)
