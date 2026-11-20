@@ -1,0 +1,10 @@
+StorePath: /nix/store/ida0s863xfqjb35pqld4pjbjjp8rc047-zhiyu-vbmeta-7.3.1
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44746708878/065grbgbabjr9vf59h8cm0d3q97fysjws5rwhr876rnm8ca5a2ly.nar.xz
+Compression: xz
+FileHash: sha256:065grbgbabjr9vf59h8cm0d3q97fysjws5rwhr876rnm8ca5a2ly
+FileSize: 2172
+NarHash: sha256:0zinmj0r5sxb89pcyfbmqvbnc3d0irn6kvgkq9r703n1d7bf8dbd
+NarSize: 65824
+References: 
+Deriver: jjfn8i8lmnlvrqwrd3rhkp1w3yvd8ydp-zhiyu-vbmeta-7.3.1.drv
+Sig: zhiyu-cache-1:QjUFkJhFzsqasHoHJDBZGVBDNF98gYrPDXlMLOSyGKCVmiuTl4z173BPy1qYmVLccqLIo+ir7cH8zwOOmjh7Cg==

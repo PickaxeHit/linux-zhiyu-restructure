@@ -1,0 +1,10 @@
+StorePath: /nix/store/kan825ikmi0a6gd0lkpbkwv2p5snvkx7-zhiyu-vendor-boot-7.3.1
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44746708878/13vd935x18jj9ljbm0a3fcdr51sqx404ij5l0yyzvqbz2nf4vdrz.nar.xz
+Compression: xz
+FileHash: sha256:13vd935x18jj9ljbm0a3fcdr51sqx404ij5l0yyzvqbz2nf4vdrz
+FileSize: 34721548
+NarHash: sha256:0ds6mbxz1n155carqcza8r2k2irz127dyzg6k5cjhdggjh9537rz
+NarSize: 100663584
+References: 6wphc8wmgv86ss3gfzzy966kaj2z662f-rpmb_proxy.c
+Deriver: g12qp073w0w3wywxz9hr9wnq3xlh7s4g-zhiyu-vendor-boot-7.3.1.drv
+Sig: zhiyu-cache-1:EoTMSOPm0oH8RU4RnXKetM/46X8llFtdqQCMtDW5/TxE+50+79rtiDSiKvWv5rz/5XjGI/1uOZMIkKdU/BbECA==

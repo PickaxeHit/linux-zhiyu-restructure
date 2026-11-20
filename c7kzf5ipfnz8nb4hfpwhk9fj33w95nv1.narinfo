@@ -1,0 +1,10 @@
+StorePath: /nix/store/c7kzf5ipfnz8nb4hfpwhk9fj33w95nv1-linux-zhiyu-7.3.1-dev
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44746708878/1m4vm6xs26z2c0zjdr024z353xynpmib6f8sink2r9xnnfmhgmqj.nar.xz
+Compression: xz
+FileHash: sha256:1m4vm6xs26z2c0zjdr024z353xynpmib6f8sink2r9xnnfmhgmqj
+FileSize: 27527340
+NarHash: sha256:02xsiihx3a4q88llg95znnqvdmwsph691nhzbc92kd0kil7504c2
+NarSize: 151444680
+References: 0l7cbysk65kvh4kd1glzbha227qg5fkq-python3-minimal-3.14.10 1q857rs68rs3gijls9wdnsjqnwnv5zd8-glibc-2.44-57 5yv04945c9sx22h47ckz4vl3jkjqnmcb-gnused-4.10 62adp9f907m9iagdl017qfgv816kfwld-gawk-5.4.1 c7kzf5ipfnz8nb4hfpwhk9fj33w95nv1-linux-zhiyu-7.3.1-dev ca634c20pj0r2md4l4q5m9x91h7jw7m0-linux-zhiyu-7.3.1 i85llwdxygjhdr650k2053h2az8p3rr8-perl-5.42.3 jw0lpdmxdr8ixp4a0hmjpvdg4r6y7p35-coreutils-9.12 mqg95s149wr7az0xbn6d6s45m76pzz8n-gcc-wrapper-16.2.0 wdb4zxq6ry09apkf4547vksg76f2vrpd-linux-7.3-zhiyu.config wyd2h6nx376rh0wlhgchx5s9myabmvc2-gcc-16.2.0 xl3n26zm1kv1zhj3mma2x929f4sx3dlh-bash-5.3p20 y5hkd35ww3j3n9wckj15r7zi5zds82ld-binutils-2.46 yshar8j70aqz9ydh798kzgvsyz26ixck-gnumake-4.4.1
+Deriver: kyi7w362lwv4xjqy6mrs046g9mlxag0a-linux-zhiyu-7.3.1.drv
+Sig: zhiyu-cache-1:39QsughT/UpyTmc6Ci5Sgf2EIEThZqq1xwcBkSCw7dsukUDcvI5qXQix9Tx4e/N6xg7P2Z1o578EKYNTCl6YCA==

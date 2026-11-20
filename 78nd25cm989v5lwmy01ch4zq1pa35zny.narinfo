@@ -1,0 +1,10 @@
+StorePath: /nix/store/78nd25cm989v5lwmy01ch4zq1pa35zny-zhiyu-initramfs-7.3.1
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44746708878/0lqzvlngb719y5da0bq7nhmflg6p6hh4frymwprph70m4181hcm7.nar.xz
+Compression: xz
+FileHash: sha256:0lqzvlngb719y5da0bq7nhmflg6p6hh4frymwprph70m4181hcm7
+FileSize: 34686704
+NarHash: sha256:16fbfms3k9cxkw74zaya6nayw8h8d7sfc2gfbx2c8120w31pf3g2
+NarSize: 34811152
+References: 6wphc8wmgv86ss3gfzzy966kaj2z662f-rpmb_proxy.c
+Deriver: qs66c3rycd1ylcml25s9483035srvhw1-zhiyu-initramfs-7.3.1.drv
+Sig: zhiyu-cache-1:iDq9+PajU+7xqhlEDU2S2anhOZNiNOOHrZqlVoE0vaT3knhFGyCWpmGekGPMUG3EWqSq/VoYxhSB2cZUm+i1Cg==
