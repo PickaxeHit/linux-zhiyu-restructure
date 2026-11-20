@@ -1,0 +1,10 @@
+StorePath: /nix/store/7rnfvra26v318xwggx0fcf8x5dm37ly7-time_main.c
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44738884938/0531bngnnx24kcb9s08jks5m6fwjnpkikja24x2k5qk85i7p51n6.nar.xz
+Compression: xz
+FileHash: sha256:0531bngnnx24kcb9s08jks5m6fwjnpkikja24x2k5qk85i7p51n6
+FileSize: 360
+NarHash: sha256:1myl828w9m48pglpgms7ly3izpzg9a2n4c7s57n9fvlsg1blxnb6
+NarSize: 488
+References: 
+Sig: zhiyu-cache-1:oMF14O5OCc2HXj0xkmJjzfTu7FAPgnZ/uKIkMovOxBNH4OJf27nkjPAG6Rjrfc/Lwd9Mv2VfgAKCOoy+C5GsDw==
+CA: fixed:r:sha256:1myl828w9m48pglpgms7ly3izpzg9a2n4c7s57n9fvlsg1blxnb6

@@ -1,0 +1,10 @@
+StorePath: /nix/store/fyygipd0mc4xfxlp9qcc5ai6dvj2my5y-zhiyu-images-7.3.1
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44738884938/1z2ym5f3bbsncj18m4953rnrg2bpz5dy5ndhjrxc7paqgxd92mza.nar.xz
+Compression: xz
+FileHash: sha256:1z2ym5f3bbsncj18m4953rnrg2bpz5dy5ndhjrxc7paqgxd92mza
+FileSize: 664
+NarHash: sha256:0fs6fzqisk7icvy0ja2wswm668zgzimaw44ivcqv57b95pcg1zr2
+NarSize: 1960
+References: d2ib747dak6d3l1fhnwdvbnncfw0nqcg-zhiyu-vendor-boot-7.3.1 hbkxa211gy8py2vzij17nlkqvwdkm9jg-zhiyu-boot-7.3.1 jqaqp9miz665w6llyxa1wphkws0zdk59-zhiyu-init-boot-1 s7d73bwfl56njmzjmvq9fsh98pzwgm3k-zhiyu-vbmeta-7.3.1
+Deriver: 7j3cfpnyf8wg50dx6p5y2n8xhkc818ni-zhiyu-images-7.3.1.drv
+Sig: zhiyu-cache-1:XKxl/SuWULMkTl+n1lxo6VYCgrFSujTfiTNNPzCf3a9QQoWK8iiMdqz6D6vLVITMARKfjstQt+q5QCE4Mf7VBQ==

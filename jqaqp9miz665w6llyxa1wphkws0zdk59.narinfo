@@ -1,0 +1,10 @@
+StorePath: /nix/store/jqaqp9miz665w6llyxa1wphkws0zdk59-zhiyu-init-boot-1
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44738884938/1x6z32pkl8bilh6aw83rjf7qxwziivx74rsbldj83l6v1r9f50cz.nar.xz
+Compression: xz
+FileHash: sha256:1x6z32pkl8bilh6aw83rjf7qxwziivx74rsbldj83l6v1r9f50cz
+FileSize: 3356
+NarHash: sha256:07b1l0wjd2p55b2m0v4f8mzmmipf94ks48fyyn80yg5vw5l0ivva
+NarSize: 8388896
+References: 
+Deriver: iqbxjmvwbswzib5662p4c8n63axcavsy-zhiyu-init-boot-1.drv
+Sig: zhiyu-cache-1:fY6scYJd6OtoQ/MVBx79FPDrHXbJiBz8xpIlpBzwQ6oSAnrjz9ZDqToep5cmovfUN+8QCz/PubHX18vOo2U7Cw==

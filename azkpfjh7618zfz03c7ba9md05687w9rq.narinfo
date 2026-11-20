@@ -1,0 +1,10 @@
+StorePath: /nix/store/azkpfjh7618zfz03c7ba9md05687w9rq-zhiyu-sensord-unstable
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44738884938/0v9nbanbys0dfk7j38bsd5dpajzlmah1fma1770dyvpq4k1kfzhv.nar.xz
+Compression: xz
+FileHash: sha256:0v9nbanbys0dfk7j38bsd5dpajzlmah1fma1770dyvpq4k1kfzhv
+FileSize: 8984
+NarHash: sha256:0gdqa865qj80186lpdkhbxqv4wmpf804q2jz6hq0nr0cxgaxqp5l
+NarSize: 74576
+References: 0d0s3z0fv51klzy72ikqwh7vi1qz4hbr-systemd-262 1q857rs68rs3gijls9wdnsjqnwnv5zd8-glibc-2.44-57 cqxvcvws2r1nhgz0xnlmc40p9cqxllsg-glib-2.90.0 kwwk4x7896lzdlcwf9l2mrcn53d1z2sq-sensh-2.1.1-unstable-2025-01-06
+Deriver: rdsi56ys59wfz4zkjnv3h0c4d8gsynqw-zhiyu-sensord-unstable.drv
+Sig: zhiyu-cache-1:O5JNK3CtYkEgv3XLO0tbWUkEo7u8QgyBVTPE++TsZLkK1DG5x8oKA0lhVw9EIZyOmJ109JDFbgUYSK0RN4ciDg==

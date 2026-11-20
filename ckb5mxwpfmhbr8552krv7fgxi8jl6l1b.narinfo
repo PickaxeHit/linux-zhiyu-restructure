@@ -1,0 +1,10 @@
+StorePath: /nix/store/ckb5mxwpfmhbr8552krv7fgxi8jl6l1b-libcamera-0.7.2
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44738884938/1al0nmmk25m6d5266wlqmmck1ww2c2ddvwsnvvaj4018clh4c1ri.nar.xz
+Compression: xz
+FileHash: sha256:1al0nmmk25m6d5266wlqmmck1ww2c2ddvwsnvvaj4018clh4c1ri
+FileSize: 2127484
+NarHash: sha256:1dzpsb2yr46212mbq7v43iqlvpxkvawknzmq6yqxf0ach77nhym8
+NarSize: 14690152
+References: 1q857rs68rs3gijls9wdnsjqnwnv5zd8-glibc-2.44-57 37zy8xcv7agiw1b6xvz35xd0p03mci0l-lttng-ust-2.15.1 4v8bc8rl0wvn25s6x3hl8s5zf3kg96pj-gstreamer-1.28.8 50cx9dj584m2zhfjy5qkcqphap07hjmi-systemd-minimal-libs-262 5a43plnbylriqi0ha6czgh4yg46jsq3f-libyaml-0.2.5 b1xs19ambfwdki76xzdasbwa38zhg851-libpisp-1.7.0 ckb5mxwpfmhbr8552krv7fgxi8jl6l1b-libcamera-0.7.2 cqxvcvws2r1nhgz0xnlmc40p9cqxllsg-glib-2.90.0 fnf24f2z4n30ixsjv6vyhikylj7czx0m-openssl-3.5.9 ivb0j29zq7c0bprs0aqqxbwqmyalwf46-libdrm-2.4.134 nq5jjmxz4f7irdjpjcadb414mqf3m61a-libglvnd-1.7.0 pvj3va2n62zkl5rchrk8kwmgyraim9ck-gst-plugins-base-1.28.8 qavrqxkw5rcjqwjw000kp49y7g75bwff-libevent-2.1.13 w79cl5jdx1hggkmy4miwhb1j9w1pb7qg-gcc-16.2.0-lib xl3n26zm1kv1zhj3mma2x929f4sx3dlh-bash-5.3p20 yabi0l2qdjwa9dfvv233xzkaq78f6fw3-gtest-1.18.0 z97fnwnq7csh9dqshwaz95y1fgpf2xm8-libyuv-1908
+Deriver: l6sr1fmpm8y88sh5wjmxylmf12r20rd2-libcamera-0.7.2.drv
+Sig: zhiyu-cache-1:pNpluh2+bV3BaeErLhwpehvJsCuY/XTXpXAFlQxanvcBZnzDHuSiZqprqiyXqva5rsgd33TOAt8+dg1cA+9tAQ==

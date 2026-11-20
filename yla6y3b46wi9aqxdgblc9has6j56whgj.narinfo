@@ -1,0 +1,10 @@
+StorePath: /nix/store/yla6y3b46wi9aqxdgblc9has6j56whgj-zhiyu-install-1
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44738884938/0bq3ykbxz404vim6y9p8jl83z4xxh7nsyx18z1k01pqgmlk5rjb4.nar.xz
+Compression: xz
+FileHash: sha256:0bq3ykbxz404vim6y9p8jl83z4xxh7nsyx18z1k01pqgmlk5rjb4
+FileSize: 7652
+NarHash: sha256:0v335fziiwaigyhdfbq5pjnymmh30vnrsbb4yjihs7fp6d2rqmq8
+NarSize: 73232
+References: 1q857rs68rs3gijls9wdnsjqnwnv5zd8-glibc-2.44-57 fnf24f2z4n30ixsjv6vyhikylj7czx0m-openssl-3.5.9
+Deriver: 3w4664s5w19m7lsmq82xrag8flhk3rmv-zhiyu-install-1.drv
+Sig: zhiyu-cache-1:57+4togzmblkmnEsWbbp6DMstFr4zcsgW9H+6i5ZD5Y/BPqEd00z46uD1aoVPJQfZJixl4O5HdpOHz35D5HhDA==

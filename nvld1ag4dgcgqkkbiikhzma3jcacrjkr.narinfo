@@ -1,0 +1,10 @@
+StorePath: /nix/store/nvld1ag4dgcgqkkbiikhzma3jcacrjkr-lenovo-zhiyu-dtb-7.3.1
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44738884938/1mskggwqgi46rs70i0zkklgz81hbv0klnacz95kmq15lg2hnacj7.nar.xz
+Compression: xz
+FileHash: sha256:1mskggwqgi46rs70i0zkklgz81hbv0klnacz95kmq15lg2hnacj7
+FileSize: 45472
+NarHash: sha256:0jcqmwv8xij0agxm4pqq42qj29rrrrjjm2shs7cdxdlp61lr12cn
+NarSize: 422528
+References: 
+Deriver: wxxiassl7hfw5jygxhaswdir9a83qqi0-lenovo-zhiyu-dtb-7.3.1.drv
+Sig: zhiyu-cache-1:hL0CTc+0gwhgMDKItRFcXL9wWAj0maBdGNdgut8oJY7+zIf49WavoXFXLYqeB3WMoxVa+WgYgUCYbXPy9a3IAg==

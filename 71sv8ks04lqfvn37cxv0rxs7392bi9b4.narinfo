@@ -1,0 +1,10 @@
+StorePath: /nix/store/71sv8ks04lqfvn37cxv0rxs7392bi9b4-qcom-sensors-1
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44738884938/15ggr20jvma51qbgqivxw298l95fvhlwm518z8iarl2z58kh2zib.nar.xz
+Compression: xz
+FileHash: sha256:15ggr20jvma51qbgqivxw298l95fvhlwm518z8iarl2z58kh2zib
+FileSize: 19492
+NarHash: sha256:0s1bmkk3vymixw8wmq4rd7frzsbysajmc5bd67zgbl6q0gx0w7i6
+NarSize: 456224
+References: 
+Deriver: wbm8dmhqg110a2wjjc1kiq82k8k0pg6c-qcom-sensors-1.drv
+Sig: zhiyu-cache-1:QVUDFnVxfiMPGsDWQ9PU8T1wtyzPfFPSNMiu1c252OmzdmtUvbCzjZPV48MBJM0hVTlgsgZ5AIAzZDH+79msCw==

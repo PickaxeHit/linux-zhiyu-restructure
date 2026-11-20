@@ -1,0 +1,10 @@
+StorePath: /nix/store/jgzvjb03slljs13b2bmk5mlfd498dd29-zhiyu-keymint-tools-unstable
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44738884938/0kwckarm4748d1m4z1h2x0rz872l931jycnp4nqnvjpqiz9wf6hf.nar.xz
+Compression: xz
+FileHash: sha256:0kwckarm4748d1m4z1h2x0rz872l931jycnp4nqnvjpqiz9wf6hf
+FileSize: 424620
+NarHash: sha256:0mndnw4h2rs6l7fyhflxzclfmyh7xn1sw947wg806ndqbfbgangq
+NarSize: 2661536
+References: 1q857rs68rs3gijls9wdnsjqnwnv5zd8-glibc-2.44-57 6wphc8wmgv86ss3gfzzy966kaj2z662f-rpmb_proxy.c 7rnfvra26v318xwggx0fcf8x5dm37ly7-time_main.c 9lvlihnvvwdnjc0bmha7v1rgx9i9pcyk-xgcc-16.2.0-libgcc gzrng9wdgjjaz5xwi1pbqcf6l15i15li-unlock_metadata.c
+Deriver: rig1nbb43qgf3pa48hd243wnv97z141k-zhiyu-keymint-tools-unstable.drv
+Sig: zhiyu-cache-1:YFiW63Kby9NsuV5ehgjf2Wbq0dHPW2hMYq+is71YA7buaI3RrH/yRr4UiLsRpRC3Mmq9yTP9FvJeFSrtDwTJAg==

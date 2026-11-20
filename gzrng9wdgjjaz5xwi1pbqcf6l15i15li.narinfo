@@ -1,0 +1,10 @@
+StorePath: /nix/store/gzrng9wdgjjaz5xwi1pbqcf6l15i15li-unlock_metadata.c
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44738884938/1361qlajxah7qwgmhc6xc54g9jb4mii0b0w2vjzp740ql3g8a4my.nar.xz
+Compression: xz
+FileHash: sha256:1361qlajxah7qwgmhc6xc54g9jb4mii0b0w2vjzp740ql3g8a4my
+FileSize: 4180
+NarHash: sha256:0rhs4r3skmb6vqjn9z8p2xwsypa5di89n0agnghbghm5yvxanfby
+NarSize: 11456
+References: 
+Sig: zhiyu-cache-1:QqaGcnAYoc0GKDtbgZcOYg/ILlYKedpNLzUWe6GIjL3Ef996eTv4gw1w8UThiYNGWBAOkEc3hLgKK6YuXboVBQ==
+CA: fixed:r:sha256:0rhs4r3skmb6vqjn9z8p2xwsypa5di89n0agnghbghm5yvxanfby

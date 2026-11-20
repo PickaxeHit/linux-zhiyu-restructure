@@ -1,0 +1,10 @@
+StorePath: /nix/store/a532ymkw75qxqkr76b8lx3wfvklr7v1s-zhiyu-firmware-unstable
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44738884938/1s93d6gvf4ihh7d0mbzvmrfmcnsvxpgygz817f3zp1yjgpdxqpny.nar.xz
+Compression: xz
+FileHash: sha256:1s93d6gvf4ihh7d0mbzvmrfmcnsvxpgygz817f3zp1yjgpdxqpny
+FileSize: 27419836
+NarHash: sha256:1bfjllq0isci8nv7nhldg0qwz3x2bq1rnm7n5h1slk5ckm8g1gd5
+NarSize: 89575400
+References: 
+Deriver: gav44dl9279bbh87ckdwnkpp60iy4frd-zhiyu-firmware-unstable.drv
+Sig: zhiyu-cache-1:qgublHIVpMQPORIZqjXxWeQM1iM+Drs1gr8T9uoN4OWVCp7fC/4il0ZweXRqzaU1CXXYPgYDv84uD1o2+FDzCw==

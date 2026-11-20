@@ -1,0 +1,10 @@
+StorePath: /nix/store/3xal6wjysqww9i7iqq6y8cpnckzq3plb-zhiyu-udev-rules-unstable
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44738884938/080h1fndlkph1pkg2m12ypf4pxc3cwi00jz5wh2m2k6fphhmkv35.nar.xz
+Compression: xz
+FileHash: sha256:080h1fndlkph1pkg2m12ypf4pxc3cwi00jz5wh2m2k6fphhmkv35
+FileSize: 1384
+NarHash: sha256:1iz55qaqzrb8w4f9vmx40mgcwdzwr45dpw8jjg2k6ffflp261947
+NarSize: 3920
+References: jw0lpdmxdr8ixp4a0hmjpvdg4r6y7p35-coreutils-9.12
+Deriver: q2nlyx1kdrjmdsw4s2610pch7x61yclc-zhiyu-udev-rules-unstable.drv
+Sig: zhiyu-cache-1:wvMPk3NifUEY1Hq3CPsMb8T7SwZv8MYfhCM+Kij2PNtzi84cBL2k/063uNGn17THDKClkfeWzhwF9Co02XnLCw==

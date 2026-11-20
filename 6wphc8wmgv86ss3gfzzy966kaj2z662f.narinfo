@@ -1,0 +1,10 @@
+StorePath: /nix/store/6wphc8wmgv86ss3gfzzy966kaj2z662f-rpmb_proxy.c
+URL: https://github.com/PickaxeHit/linux-zhiyu-restructure/releases/download/nix-cache-44738884938/01krjmv538x006nkalz13hp05zi4r3k78pk0qdcp6amqshw1qrj6.nar.xz
+Compression: xz
+FileHash: sha256:01krjmv538x006nkalz13hp05zi4r3k78pk0qdcp6amqshw1qrj6
+FileSize: 2092
+NarHash: sha256:1gsi99pm20plha6zhl7cwlnvwzxdgsyy7bzdkphgvqx5z571in22
+NarSize: 5160
+References: 
+Sig: zhiyu-cache-1:Fpk2OUSb28Gi/UUxeAEvhZdrMeNCaBQAB7znZXCxIstK9OX73SbGO290gqccDyykah5ZeHH9mH0kmcV9Hb60Aw==
+CA: fixed:r:sha256:1gsi99pm20plha6zhl7cwlnvwzxdgsyy7bzdkphgvqx5z571in22
