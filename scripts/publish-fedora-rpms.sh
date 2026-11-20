@@ -2,9 +2,6 @@
 # Publish RPM payloads in a Release and the directory-shaped DNF index in Git.
 set -euo pipefail
 rpms=$(realpath "${1:?RPM artifact directory required}")
-# Boot images are per-generation artifacts now; keep them out of the package
-# array, the repository index and the release.
-rm -f "$rpms"/linux-zhiyu-images-*.rpm
 sha=${2:?source commit required}
 tag=repo-rpm
 branch=rpm-repodata
@@ -18,7 +15,7 @@ if git cat-file -e "$sha:metadata/sources.json" 2>/dev/null ||
     git cat-file -e "$sha:scripts/sensh-revision" 2>/dev/null; then
     upstream_packages+=(sensh)
 fi
-names=(linux-zhiyu-modules linux-zhiyu-headers linux-zhiyu-firmware
+names=(linux-zhiyu-modules linux-zhiyu-headers linux-zhiyu-firmware linux-zhiyu-images
        libcamera-zhiyu zhiyu-sensord "${upstream_packages[@]}")
 packages=("$rpms"/*.rpm)
 # libcamera-zhiyu is published in more than one ABI version, everything else

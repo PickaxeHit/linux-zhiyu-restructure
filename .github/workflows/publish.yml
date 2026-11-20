@@ -63,12 +63,19 @@ jobs:
           fi
           printf "build_sha=%s\nsource_run=%s\n" "$build_sha" "$run_id" >> "$GITHUB_ENV"
           gh run download "$run_id" --name zhiyu-package-repositories-input --dir out/pkgs
+          gh run download "$run_id" --name zhiyu-images --dir out/image-archive
 
       - uses: actions/download-artifact@v4
         if: github.event_name != 'push' && inputs.build_run == ''
         with:
           name: zhiyu-package-repositories-input
           path: out/pkgs
+
+      - uses: actions/download-artifact@v4
+        if: github.event_name != 'push' && inputs.build_run == ''
+        with:
+          name: zhiyu-images
+          path: out/image-archive
 
       - name: Install repository tools
         run: |
@@ -85,14 +92,24 @@ jobs:
             gh run download "$source_run" --name zhiyu-fedora-rpms --dir out/fedora-rpms
           fi
 
+      - name: Verify signed image archive contents
+        run: |
+          set -euo pipefail
+          archives=(out/image-archive/zhiyu-images.tar.*)
+          test "${#archives[@]}" -eq 1
+          mkdir -p out/release-images
+          tar -xf "${archives[0]}" -C out/release-images
+          cd out/release-images
+          sha256sum -c SHA256SUMS
+          for image in boot vendor_boot init_boot vbmeta; do
+            test -s "$image.img"
+          done
+
       - name: Generate indexes and publish package sources
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # Boot images are per-generation artifacts now; keep them out of
-          # the repositories and their indexes.
-          rm -f out/pkgs/linux-zhiyu-images_* out/pkgs/linux-zhiyu-images-*
           scripts/mkrepos.sh debian out/pkgs out/repositories
           scripts/mkrepos.sh archlinuxarm out/pkgs out/repositories
           for distro in debian archlinuxarm; do
@@ -104,7 +121,7 @@ jobs:
                 packages=("$dir"/*.deb)
                 indexes=("$dir/Packages" "$dir/Packages.gz" "$dir/Release")
                 # Debian carries both libcamera ABIs.
-                expected=6
+                expected=7
                 ;;
               archlinuxarm)
                 tag=repo-pacman
@@ -112,7 +129,7 @@ jobs:
                 packages=("$dir"/*.pkg.tar.zst)
                 indexes=("$dir/zhiyu.files" "$dir/zhiyu.db")
                 # Arch only carries the 0.7 ABI.
-                expected=5
+                expected=6
                 ;;
             esac
             test "${#packages[@]}" -eq "$expected"
@@ -140,6 +157,29 @@ jobs:
                 --notes "Flat package repository for Lenovo TB378FC. Use the release download URL as the repository base."
             fi
           done
+
+
+      - name: Publish signed boot images
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=zhiyu-images
+          images=(out/release-images/*.img)
+          if [ -f out/release-images/LICENSES.tar.gz ]; then
+            images+=(out/release-images/LICENSES.tar.gz)
+          fi
+          checksums=out/release-images/SHA256SUMS
+          printf 'Signed Lenovo TB378FC boot images from build commit %s.\n' "$build_sha" > image-release-notes.md
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "${images[@]}" --clobber
+            gh release upload "$tag" "$checksums" --clobber
+            gh release edit "$tag" --prerelease=false --latest --notes-file image-release-notes.md
+          else
+            gh release create "$tag" "${images[@]}" "$checksums" \
+              --latest --target "$build_sha" \
+              --title "Zhiyu signed boot images" --notes-file image-release-notes.md
+          fi
 
 
       - name: Publish Fedora RPM repository
