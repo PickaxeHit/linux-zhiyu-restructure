@@ -58,7 +58,7 @@ stdenv.mkDerivation {
     # Zhiyu-vendorprops.m4 includes piano/*.m4 from its own directory and
     # audioreach/*, util/* from the pinned vendor tree.
     mkdir -p tplg
-    cp ${../initramfs-src/tplg/Zhiyu-vendorprops.m4} tplg/
+    cp ${../initramfs-src/tplg/Zhiyu-vendorprops.m4} tplg/Zhiyu-vendorprops.m4
     cp -r ${../initramfs-src/tplg/piano} tplg/piano
     ( cd tplg && m4 -I . -I ${audioreach} Zhiyu-vendorprops.m4 > ../sm8750-tplg.conf )
     mkdir -p $out/lib/firmware/qcom/sm8750
