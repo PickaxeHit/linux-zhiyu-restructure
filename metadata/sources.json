@@ -24,7 +24,8 @@
     "version": "1.16.0"
   },
   "firmware": {
-    "rev": "2d2bafbeddb321be3b4a26ba3a9bf4fed7bb8985",
+    "archive_sha256": "aeaa21b22ca3d8721eb5db8c372cd7719cf7fdf58431d71b02d6feeee1fda3a7",
+    "rev": "c9b1c5054eaeaf8e931e3d0c0daacccd4377eccf",
     "type": "git",
     "url": "https://github.com/PickaxeHit/linux-zhiyu-firmware.git"
   },

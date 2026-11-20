@@ -23,6 +23,7 @@ if [ -z "${F2FS_SRC:-}" ]; then
 	bash "$here/fetch-source.sh" "$url" "$checksum" "$src"
 fi
 [ -f "$src/configure.ac" ] || die "f2fs-tools source is missing: $src"
+install -d "$(dirname "$out")"
 cd "$src"
 
 [ -f configure ] || ./autogen.sh >/dev/null 2>&1

@@ -10,6 +10,6 @@
 /keymint/bin/
 /keymint/__pycache__/
 /keymint/.deps/
-/initramfs-src/blobs/fsck.f2fs
+/initramfs-src/blobs/
 /result*
 /dist/

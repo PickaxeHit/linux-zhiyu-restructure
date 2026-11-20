@@ -6,10 +6,10 @@
     "rev": "d6bb205aca5f4b8fa6b2f44cf8b5f6a081cbf037"
   },
   "firmware": {
-    "hash": "sha256-SBdKlKuReLqdDR5FM+WHwEi9mqbIJT8jHgyDog7zybs=",
+    "hash": "sha256-4P6HxbOmv/B0TDo1Fr0fhzEJxIIajOlJQTUf2LEkwJU=",
     "owner": "PickaxeHit",
     "repo": "linux-zhiyu-firmware",
-    "rev": "2d2bafbeddb321be3b4a26ba3a9bf4fed7bb8985"
+    "rev": "c9b1c5054eaeaf8e931e3d0c0daacccd4377eccf"
   },
   "idlc": {
     "hash": "sha256-zKQUF2FeKDkX5jymiAZ220WmvwK6Yv3qfzBa/ionySQ=",

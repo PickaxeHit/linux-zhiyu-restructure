@@ -243,6 +243,9 @@ jobs:
           scripts/mkpkgs.sh stage/linux-zhiyu-headers out/pkgs
 
           # ---- firmware ----
+          # The blobs live in PickaxeHit/linux-zhiyu-firmware at the commit
+          # pinned in metadata/sources.json.
+          bash scripts/fetch-firmware.sh initramfs-src/blobs
           F=stage/linux-zhiyu-firmware/usr/lib/firmware
           install -d "$F"
           cp -a initramfs-src/blobs/firmware/. "$F"/

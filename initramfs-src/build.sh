@@ -89,6 +89,9 @@ fi
 "$here/../keymint/stage-initramfs.sh" "$stage"
 
 # ---- 3. firmware blobs ----------------------------------------------------
+# The blobs live in PickaxeHit/linux-zhiyu-firmware; fetch them if absent.
+[ -d "$here/blobs/firmware" ] ||
+	bash "$here/../scripts/fetch-firmware.sh" "$here/blobs"
 cp -a "$here"/blobs/firmware/. "$stage/lib/firmware/"
 
 # the SM8750 audio topology is *built* (m4 + alsatplg), not a blob: it is
