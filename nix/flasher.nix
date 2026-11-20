@@ -10,7 +10,7 @@
 
 stdenv.mkDerivation {
   pname = "zhiyu-install";
-  version = "1";
+  version = "2";
 
   dontUnpack = true;
 

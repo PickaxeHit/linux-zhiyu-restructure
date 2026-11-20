@@ -93,6 +93,11 @@ stdenv.mkDerivation {
 
     # ---- /init and its helpers -------------------------------------------
     install -m0755 ${fsDir}/init $stage/init
+    # Keep the shared distro init script unchanged in the source tree; the
+    # NixOS ramdisk injects a strict generation selector at rootfs_init.
+    python3 ${./patch-init.py} "$stage/init"
+    $CC -static -Os -Wall -Wextra -Werror -L${cc.libc.static}/lib \
+      -o "$stage/bin/zhiyu-boot-select" ${./boot-select.c}
     install -m0755 ${fsDir}/libexec/metadata-root $stage/libexec/metadata-root
 
     # ---- busybox + the applets the init script uses ----------------------
@@ -149,7 +154,7 @@ stdenv.mkDerivation {
         exit 1
       }
     }
-    for binary in busybox fsck.f2fs btaddr charger userdata-map; do
+    for binary in busybox fsck.f2fs btaddr charger userdata-map zhiyu-boot-select; do
       check_binary "$stage/bin/$binary"
     done
     # ---- firmware + audio topology ---------------------------------------

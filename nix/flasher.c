@@ -10,9 +10,9 @@
  * Only the slot that is currently running is written; the other one may hold
  * Android and is never touched.  A partition whose content already matches is
  * left alone, so ordinary system upgrades do not write to the flash at all.
- * After all four partitions have been written and read back, the generation is
- * recorded in /nix/var/nix/profiles/zhiyu-boot, which is what the initramfs
- * prefers at boot.
+ * Before any write the target is pinned in zhiyu-pending. After all four
+ * partitions have been checked, zhiyu-boot is atomically updated. The boot
+ * selector only accepts a generation matching both artifact IDs.
  *
  * --force only disables the "content is already correct" shortcut; it never
  * skips the board, partition or slot checks.
@@ -29,12 +29,15 @@
 #include <sys/file.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <sys/sysmacros.h>
 #include <linux/fs.h>
 #include <openssl/evp.h>
 
 #define CHUNK (1024 * 1024)
 #define LOCK_PATH "/run/lock/zhiyu-install.lock"
-#define BOOT_PROFILE "/nix/var/nix/profiles/zhiyu-boot"
+#define PROFILE_DIR "/nix/var/nix/profiles"
+#define BOOT_PROFILE PROFILE_DIR "/zhiyu-boot"
+#define PENDING_PROFILE PROFILE_DIR "/zhiyu-pending"
 
 static const char *const parts[] = { "boot", "vendor_boot", "init_boot", "vbmeta" };
 #define NPARTS (sizeof(parts) / sizeof(parts[0]))
@@ -51,6 +54,8 @@ struct part {
 	off_t part_size;
 	int img_fd;
 	int dev_fd;
+	dev_t dev_id;
+	int needs_write;
 };
 
 static void die(const char *msg)
@@ -91,13 +96,15 @@ static int sha256_fd(int fd, off_t len, unsigned char out[32])
 	unsigned int outlen = 32;
 
 	if (!buf || !ctx)
-		goto out;
+		goto free;
 	if (EVP_DigestInit_ex(ctx, EVP_sha256(), NULL) != 1)
 		goto free;
 	while (done < len) {
 		size_t want = (size_t)((len - done) < CHUNK ? (len - done) : CHUNK);
 		ssize_t n = pread(fd, buf, want, done);
 
+		if (n < 0 && errno == EINTR)
+			continue;
 		if (n <= 0)
 			goto free;
 		if (EVP_DigestUpdate(ctx, buf, (size_t)n) != 1)
@@ -109,7 +116,6 @@ static int sha256_fd(int fd, off_t len, unsigned char out[32])
 	rc = 0;
 free:
 	EVP_MD_CTX_free(ctx);
-out:
 	free(buf);
 	return rc;
 }
@@ -139,10 +145,10 @@ static int lookup(const char *dir, const char *file, const char *name, char *out
 
 		tok = strtok_r(line, " \t\n", &save);
 		nm = strtok_r(NULL, " \t\n", &save);
-		if (!tok || !nm)
-			continue;
-		if (strtok_r(NULL, " \t\n", &save))
-			continue;
+		if (!tok || !nm || strtok_r(NULL, " \t\n", &save)) {
+			fclose(f);
+			return -2;
+		}
 		if (strcmp(nm, name) != 0)
 			continue;
 		if (found++) {
@@ -157,6 +163,7 @@ static int lookup(const char *dir, const char *file, const char *name, char *out
 		}
 		strcpy(out, tok);
 	}
+	if (ferror(f)) { fclose(f); return -2; }
 	fclose(f);
 	return found ? 0 : -1;
 }
@@ -166,12 +173,13 @@ static int parse_size(const char *s, off_t *out)
 	char *end = NULL;
 	long long v;
 
+	if (!*s || strspn(s, "0123456789") != strlen(s)) return -1;
 	errno = 0;
 	v = strtoll(s, &end, 10);
 	if (errno || !end || *end != '\0' || v <= 0)
 		return -1;
 	*out = (off_t)v;
-	return 0;
+	return (long long)*out == v ? 0 : -1;
 }
 
 static int all_hex(const char *s, size_t n)
@@ -200,7 +208,7 @@ static int on_zhiyu(void)
 		return 0;
 	n = (int)read(fd, buf, sizeof(buf) - 1);
 	close(fd);
-	if (n <= 0)
+	if (n <= 0 || n == (int)sizeof(buf) - 1 || buf[n-1] != '\0')
 		return 0;
 	/* The property is a NUL-separated string list; compare each entry. */
 	buf[n] = '\0';
@@ -296,13 +304,17 @@ static char *current_slot(void)
 				die("malformed androidboot.slot_suffix in /proc/bootconfig");
 			}
 		}
+		if (ferror(f)) die("cannot read /proc/bootconfig");
 		fclose(f);
+	} else if (errno != ENOENT) {
+		die_errno("cannot open", "/proc/bootconfig");
 	}
 
 	fd = open("/proc/cmdline", O_RDONLY | O_CLOEXEC);
 	if (fd >= 0) {
 		n = read(fd, buf, sizeof(buf) - 1);
 		close(fd);
+		if (n <= 0 || n == (ssize_t)sizeof(buf)-1) die("cannot read complete /proc/cmdline");
 		if (n > 0) {
 			buf[n] = '\0';
 			for (line = strtok_r(buf, " \t\n", &save); line; line = strtok_r(NULL, " \t\n", &save)) {
@@ -310,6 +322,8 @@ static char *current_slot(void)
 					die("malformed androidboot.slot_suffix in /proc/cmdline");
 			}
 		}
+	} else {
+		die_errno("cannot open", "/proc/cmdline");
 	}
 
 	if (seen_bc && seen_cl && strcmp(slot_bc, slot_cl) != 0)
@@ -320,12 +334,61 @@ static char *current_slot(void)
 	return strdup(seen_bc ? slot_bc : slot_cl);
 }
 
+/* Recheck GPT identity on the opened FD, not just its udev link. */
+static void check_partname(dev_t dev, const char *expected)
+{
+	char path[128], line[512];
+	FILE *f;
+	int found = 0;
+	fmt(path, sizeof(path), "/sys/dev/block/%u:%u/uevent", major(dev), minor(dev));
+	f = fopen(path, "r");
+	if (!f) die_errno("cannot read partition identity", path);
+	while (fgets(line, sizeof(line), f)) {
+		if (strncmp(line, "PARTNAME=", 9)) continue;
+		if (++found != 1 || strcmp(trim(line + 9), expected))
+			die("opened block device has the wrong GPT partition name");
+	}
+	if (ferror(f) || found != 1) die("GPT partition identity unavailable");
+	fclose(f);
+}
+
+static void sync_profiles(void)
+{
+	int fd = open(PROFILE_DIR, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+	if (fd < 0) die_errno("cannot open profile directory", PROFILE_DIR);
+	if (fsync(fd) < 0) die_errno("cannot sync profile directory", PROFILE_DIR);
+	if (close(fd) < 0) die_errno("cannot close profile directory", PROFILE_DIR);
+}
+
+/* Direct symlinks under profiles are GC roots. Keep the target pinned before
+ * touching the partitions; leave it pinned if an update is interrupted. */
+static void set_profile(const char *profile, const char *target)
+{
+	char tmp[PATH_MAX];
+	fmt(tmp, sizeof(tmp), "%s.tmp.%d", profile, (int)getpid());
+	if (unlink(tmp) < 0 && errno != ENOENT) die_errno("cannot remove stale link", tmp);
+	if (symlink(target, tmp) < 0) die_errno("cannot create profile", tmp);
+	if (rename(tmp, profile) < 0) die_errno("cannot commit profile", profile);
+	sync_profiles();
+}
+
+static void read_boot_ids(const char *path, char out[130])
+{
+	char a[65], b[65], extra;
+	FILE *f = fopen(path, "r");
+	if (!f) die_errno("cannot read boot IDs", path);
+	if (fscanf(f, "%64s %64s %c", a, b, &extra) != 2 || ferror(f) ||
+	    !all_hex(a,64) || !all_hex(b,64)) die("invalid boot ID pair");
+	fclose(f);
+	fmt(out,130,"%s %s",a,b);
+}
+
 /* ---- main -------------------------------------------------------------*/
 
 int main(int argc, char **argv)
 {
 	const char *system = NULL;
-	char images[4096], slot[3], sums[65], sizesz[32];
+	char images[4096], slot[3], sums[65], sizesz[32], resolved[PATH_MAX];
 	struct part p[NPARTS];
 	int lockfd, changed = 0;
 
@@ -341,9 +404,10 @@ int main(int argc, char **argv)
 	}
 	if (!system)
 		die("usage: zhiyu-install [--dry-run] [--force] <toplevel>");
+	if (geteuid() != 0) die("must run as root");
 
 	/* Serialise with any other flash operation (nixos-rebuild vs. hand run). */
-	lockfd = open(LOCK_PATH, O_CREAT | O_RDWR | O_CLOEXEC, 0600);
+	lockfd = open(LOCK_PATH, O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0600);
 	if (lockfd < 0)
 		die_errno("cannot open flash lock", LOCK_PATH);
 	if (flock(lockfd, LOCK_EX | LOCK_NB) < 0)
@@ -352,9 +416,25 @@ int main(int argc, char **argv)
 	if (!on_zhiyu())
 		die("not running on a Lenovo TB378FC");
 
+	/* Freeze the generation before resolving any of its files. */
+	if (!realpath(system, resolved)) die_errno("cannot resolve", system);
+	if (strncmp(resolved, "/nix/store/", 11) || strchr(resolved+11, '/') ||
+	    !strstr(resolved+11, "-nixos-system-"))
+		die("target must be a NixOS system in /nix/store");
+	system = resolved;
 	fmt(images, sizeof(images), "%s/etc/zhiyu/boot-images", system);
 	if (access(images, R_OK) < 0)
 		die_errno("no boot images in", images);
+	{
+		char path[PATH_MAX], expected[130], actual[130];
+		fmt(path,sizeof(path),"%s/etc/zhiyu/boot-id",system);
+		read_boot_ids(path,expected);
+		fmt(path,sizeof(path),"%s/BOOT-IDS",images);
+		read_boot_ids(path,actual);
+		if (strcmp(expected,actual)) die("generation and image bundle IDs disagree");
+		fmt(path,sizeof(path),"%s/init",system);
+		if (access(path,X_OK)<0) die_errno("target init is not executable",path);
+	}
 
 	{
 		char *s = current_slot();
@@ -416,6 +496,14 @@ int main(int argc, char **argv)
 			die_errno("cannot stat partition", it->devpath);
 		if (!S_ISBLK(st.st_mode))
 			die("partition is not a block device");
+		it->dev_id = st.st_rdev;
+		{
+			char label[64];
+			fmt(label,sizeof(label),"%s%s",parts[i],slot);
+			check_partname(it->dev_id,label);
+			for (size_t j=0;j<i;j++)
+				if (p[j].dev_id==it->dev_id) die("two partitions resolve to the same device");
+		}
 		{
 			unsigned long long sz;
 
@@ -434,6 +522,18 @@ int main(int argc, char **argv)
 
 	printf("zhiyu-install: %zu image(s) for slot %s from %s\n", NPARTS, slot, system);
 
+	/* Read all existing partition hashes before the first write. A read
+	 * failure is not a reason to overwrite a potentially failing device. */
+	for (size_t i=0;i<NPARTS;i++) {
+		unsigned char digest[32];
+		char hash[65];
+		if (sha256_fd(p[i].dev_fd,p[i].image_size,digest)<0)
+			die_errno("cannot read partition before flash",p[i].devpath);
+		to_hex(digest,hash);
+		p[i].needs_write=force || strcmp(hash,p[i].sha)!=0;
+	}
+	if (!dry_run) set_profile(PENDING_PROFILE, system);
+
 	/* ---- write what differs ---------------------------------------- */
 	for (size_t i = 0; i < NPARTS; i++) {
 		struct part *it = &p[i];
@@ -442,12 +542,9 @@ int main(int argc, char **argv)
 		off_t done = 0;
 		unsigned char *buf;
 
-		if (!force && sha256_fd(it->dev_fd, it->image_size, digest) == 0) {
-			to_hex(digest, hash);
-			if (strcmp(hash, it->sha) == 0) {
-				printf("zhiyu-install: %s unchanged, skipping\n", parts[i]);
-				continue;
-			}
+		if (!it->needs_write) {
+			printf("zhiyu-install: %s unchanged, skipping\n", parts[i]);
+			continue;
 		}
 		changed++;
 		if (dry_run) {
@@ -466,6 +563,7 @@ int main(int argc, char **argv)
 			ssize_t n = pread(it->img_fd, buf, want, done);
 			ssize_t w = 0;
 
+			if (n < 0 && errno == EINTR) continue;
 			if (n <= 0) {
 				free(buf);
 				die_errno("cannot read image", it->image);
@@ -473,6 +571,7 @@ int main(int argc, char **argv)
 			while (w < n) {
 				ssize_t k = pwrite(it->dev_fd, buf + w, (size_t)(n - w), done + w);
 
+				if (k < 0 && errno == EINTR) continue;
 				if (k <= 0) {
 					free(buf);
 					die_errno("write failed", it->devpath);
@@ -501,30 +600,12 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	/* All four partitions are in place: record this generation as the one to
-	 * boot.  The initramfs prefers this profile over "system". */
-	{
-		char tmp[PATH_MAX], resolved[PATH_MAX];
-
-		if (!realpath(system, resolved))
-			die_errno("cannot resolve", system);
-		fmt(tmp, sizeof(tmp), "%s.tmp.%d", BOOT_PROFILE, (int)getpid());
-		unlink(tmp);
-		if (symlink(resolved, tmp) < 0)
-			die_errno("cannot create boot profile", tmp);
-		if (rename(tmp, BOOT_PROFILE) < 0) {
-			unlink(tmp);
-			die_errno("cannot update boot profile", BOOT_PROFILE);
-		}
-		{
-			int dfd = open("/nix/var/nix/profiles", O_DIRECTORY | O_CLOEXEC);
-
-			if (dfd >= 0) {
-				fsync(dfd);
-				close(dfd);
-			}
-		}
-	}
+	/* All four partitions verified. Publish the boot root, then remove the
+	 * pending root. An interrupted flash is NOT an atomic slot update. */
+	set_profile(BOOT_PROFILE, system);
+	if (unlink(PENDING_PROFILE) < 0 && errno != ENOENT)
+		die_errno("cannot remove pending profile", PENDING_PROFILE);
+	sync_profiles();
 
 	printf("zhiyu-install: slot %s complete (%d written)\n", slot, changed);
 	return 0;

@@ -60,17 +60,47 @@ let
     + " init=/sbin/init silent_boot.mode=nonsilent no_console_suspend"
     + " pm_debug_messages mem_sleep_default=s2idle";
 
-  cmdline = lib.concatStringsSep " " (lib.filter (s: s != "") ([ boardCmdline ] ++ kernelParams));
+  baseCmdline = lib.concatStringsSep " " (lib.filter (s: s != "") ([ boardCmdline ] ++ kernelParams));
 
-  # Identifies this exact boot artifact set.  It is derived from the *inputs*
-  # (kernel, DTB, ramdisk, command line), not from the finished images, so it
-  # can be embedded in vendor_bootconfig without a circular dependency.  The
-  # same value is written to the generation's etc/zhiyu/boot-id.
-  bootId = builtins.substring 0 16 (
-    builtins.hashString "sha256" "${kernel.drvPath}${dtb.drvPath}${initramfs.drvPath}${cmdline}"
+  # Two independent IDs, both derived from serialized build inputs (never from
+  # the finished images or the generation, which would be circular):
+  #   kernel_id  -> boot.img command line
+  #   vendor_id  -> vendor_bootconfig
+  # The generation stores both in etc/zhiyu/boot-id, so a boot can verify that
+  # the images on the flash are the ones that generation was built for.
+  artifactId =
+    inputs: builtins.hashString "sha256" (builtins.unsafeDiscardStringContext (builtins.toJSON inputs));
+  commonIdInputs = {
+    format = "zhiyu-avb-v2-ids";
+    tool = android-tools.drvPath;
+    key = builtins.hashFile "sha256" avbKey;
+    inherit
+      pagesize
+      osVersion
+      osPatch
+      salt
+      ;
+  };
+  kernelId = artifactId (
+    commonIdInputs
+    // {
+      kernel = kernel.drvPath;
+      cmdline = baseCmdline;
+      size = partitions.boot;
+    }
   );
-
-  allBootconfig = [ "zhiyu.boot_id=${bootId}" ] ++ bootconfig;
+  vendorId = artifactId (
+    commonIdInputs
+    // {
+      dtb = dtb.drvPath;
+      ramdisk = initramfs.drvPath;
+      inherit bootconfig;
+      size = partitions.vendor_boot;
+    }
+  );
+  bootId = "${kernelId} ${vendorId}";
+  cmdline = baseCmdline + " zhiyu.kernel_id=${kernelId}";
+  allBootconfig = [ "zhiyu.vendor_id=${vendorId}" ] ++ bootconfig;
 
   bootconfigFile = lib.optionalString (allBootconfig != [ ]) ''
     {
@@ -80,7 +110,7 @@ let
   '';
 in
 rec {
-  inherit bootId;
+  inherit bootId kernelId vendorId;
 
   boot = stdenv.mkDerivation {
     pname = "zhiyu-boot";
@@ -261,6 +291,8 @@ rec {
       ( cd $out && for img in *.img; do
           printf '%s %s\n' "$(stat -L -c %s "$img")" "$img"
         done | sort -k2 > SIZES )
+
+      printf '%s\n' ${lib.escapeShellArg bootId} > $out/BOOT-IDS
 
       cat $out/SHA256SUMS
     '';

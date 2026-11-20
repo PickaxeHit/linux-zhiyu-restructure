@@ -12,41 +12,11 @@
   config,
   lib,
   pkgs,
-  zhiyuSources ? lib.importJSON ../metadata/sources.lock.json,
   ...
 }:
 
 {
   imports = [ ../nix/nixos-module.nix ];
-
-  # ---- libcamera -------------------------------------------------------
-  # Same package name and version as the stock libcamera, only the source
-  # changes.  It is NOT installed by overriding pkgs.libcamera: that would
-  # change every dependent's input hash and rebuild gst-plugins-bad -> gtk4 ->
-  # Plasma.  Instead the stock package stays in the closure (and in the binary
-  # cache) and system.replaceDependencies rewrites the store paths of the
-  # packages that link it, which is a copy, not a rebuild.
-  nixpkgs.overlays = [
-    (final: prev: {
-      libcamera-zhiyu = prev.libcamera.overrideAttrs (_: {
-        src = prev.fetchFromGitHub {
-          inherit (zhiyuSources."libcamera-0.7")
-            owner
-            repo
-            rev
-            hash
-            ;
-        };
-      });
-    })
-  ];
-
-  system.replaceDependencies.replacements = [
-    {
-      oldDependency = pkgs.libcamera;
-      newDependency = pkgs.libcamera-zhiyu;
-    }
-  ];
 
   nixpkgs.config.allowUnfree = true;
 
@@ -140,7 +110,6 @@
   # libcamera-zhiyu gives `cam`; the rest are for checking the video, Vulkan,
   # OpenCL, V4L2 and audio paths on the device.
   environment.systemPackages = with pkgs; [
-    libcamera-zhiyu
     libva-utils
     vulkan-tools
     clinfo
