@@ -68,7 +68,10 @@ else
 fi
 printf '\n## Upstream sources · 上游源码\n\n' >> "$notes"
 for name in "${upstream_packages[@]}"; do
-    revision=$(git show "$sha:scripts/$name-revision")
+    # The revision is part of the metadata at the built commit, not a
+    # per-package file any more.
+    revision=$(git show "$sha:metadata/sources.json" |
+        python3 -c 'import json, sys; print(json.load(sys.stdin)[sys.argv[1]]["rev"])' "$name")
     case "$name" in
         hexagonrpc) source_url="https://github.com/linux-msm/hexagonrpc/archive/$revision.tar.gz" ;;
         sensh) source_url="https://gitlab.com/flamingradian/sensh/-/archive/$revision/sensh-$revision.tar.gz" ;;
