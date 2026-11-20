@@ -63,3 +63,23 @@ https://github.com/KunBuFenZi/progt13-ubuntu
 * 其余第三方源码固定记录在 `metadata/sources.json`（git commit 或 tarball 的 version + SHA256）。这个文件只由人工修改，主分支是唯一权威来源；构建脚本只读取它，不再各自硬编码版本，也没有任何自动更新版本的 CI。
 * `scripts/metadata.py verify` 校验 metadata 格式，CI 构建前和本地 `build.sh` 开头都会执行。
 * 本地初始化源码：只做用户空间或 Nix 工作时拉取小的子模块即可：`git submodule update --init --depth 1 libcamera/0.7 libcamera/0.8`；需要构建内核时再执行 `git submodule update --init --depth 1 kernel-source`（内核子模块较大，不要在只需要元数据时拉取）。
+
+### Nix 二进制缓存
+Nix 构建的产物（内核、initramfs、板级工具、libcamera fork、镜像）由 CI 签名后发布，可以直接作为 substituter：
+
+```nix
+{
+  nix.settings = {
+    substituters = [
+      "https://raw.githubusercontent.com/PickaxeHit/linux-zhiyu-restructure/nix-repodata"
+      "https://cache.nixos.org"
+    ];
+    trusted-public-keys = [
+      "zhiyu-cache-1:bI3q/LSJTidQCaNFmF8hpa9egw4SeNQ/vU0BJpW+kqo="
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+    ];
+  };
+}
+```
+
+`cache.nixos.org` 提供公开依赖（systemd、glibc 等），我们的缓存只包含自行构建、官方缓存里没有的对象。轻量 Flake 入口是 `github:PickaxeHit/linux-zhiyu-restructure/nix-stable`，它通过 `metadata/sources.lock.json` 拉取固定的内核、libcamera 和固件归档，不包含这些源码本身。
