@@ -8,18 +8,21 @@
   lib,
   stdenv,
   fetchFromGitHub,
+  sources,
   m4,
   alsa-utils,
 }:
 
 let
   # The topology's entry point includes the vendor tree ("audioreach/...",
-  # "util/..."), pinned by initramfs-src/tplg/VENDOR-COMMIT.txt.
+  # "util/..."), pinned in metadata/sources.lock.json.
   audioreach = fetchFromGitHub {
-    owner = "linux-msm";
-    repo = "audioreach-topology";
-    rev = "d6bb205aca5f4b8fa6b2f44cf8b5f6a081cbf037";
-    hash = "sha256-J/xqKMa428ScOa/WOvoRopZpo2L70w78XRp8v7JHKRY=";
+    inherit (sources.audioreach)
+      owner
+      repo
+      rev
+      hash
+      ;
   };
 in
 stdenv.mkDerivation {

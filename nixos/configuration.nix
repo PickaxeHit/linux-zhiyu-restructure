@@ -12,6 +12,7 @@
   config,
   lib,
   pkgs,
+  zhiyuSources ? lib.importJSON ../metadata/sources.lock.json,
   ...
 }:
 
@@ -28,11 +29,13 @@
   nixpkgs.overlays = [
     (final: prev: {
       libcamera-zhiyu = prev.libcamera.overrideAttrs (_: {
-        src = prev.fetchurl {
-          url = "https://codeload.github.com/PickaxeHit/libcamera-zhiyu/tar.gz/332b91cb463216003b10792f5fa7b7a12073946d";
-          # unpackPhase picks the archive format from the name.
-          name = "libcamera-zhiyu-0.7.2.tar.gz";
-          hash = "sha256-nHaedwmADKoxG39q0DeuDe7Hmc+F1hrYYfWoY4qdRVw=";
+        src = prev.fetchFromGitHub {
+          inherit (zhiyuSources."libcamera-0.7")
+            owner
+            repo
+            rev
+            hash
+            ;
         };
       });
     })

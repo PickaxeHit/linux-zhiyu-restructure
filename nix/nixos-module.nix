@@ -35,17 +35,19 @@ let
   # The board kernel is only the *default* for boot.kernelPackages; everything
   # below uses the kernel NixOS finally selected, so the ramdisk, the DTB and
   # boot.img can never describe a different build than the system itself.
-  boardKernel = pkgs.callPackage ./kernel.nix { };
+  sources = lib.importJSON ../metadata/sources.lock.json;
+
+  boardKernel = pkgs.callPackage ./kernel.nix { inherit sources; };
   kernel = config.boot.kernelPackages.kernel;
 
-  keymint = pkgs.callPackage ./keymint.nix { };
-  sensh = pkgs.callPackage ./sensh.nix { };
+  keymint = pkgs.callPackage ./keymint.nix { inherit sources; };
+  sensh = pkgs.callPackage ./sensh.nix { inherit sources; };
   sensord = pkgs.callPackage ./sensord.nix { inherit sensh; };
 
-  firmware = pkgs.callPackage ./firmware.nix { };
+  firmware = pkgs.callPackage ./firmware.nix { inherit sources; };
   udevRules = pkgs.callPackage ./udev-rules.nix { };
   dbusPolicy = pkgs.callPackage ./sensord-dbus.nix { };
-  qcomVaDriver = pkgs.callPackage ./qcom-va-driver.nix { };
+  qcomVaDriver = pkgs.callPackage ./qcom-va-driver.nix { inherit sources; };
   qcomSensors = pkgs.callPackage ./qcom-sensors.nix { };
 
   dtb = pkgs.callPackage ./dts.nix {

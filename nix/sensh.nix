@@ -6,6 +6,7 @@
   lib,
   stdenv,
   fetchgit,
+  sources,
   meson,
   ninja,
   pkg-config,
@@ -19,9 +20,7 @@ stdenv.mkDerivation {
   version = "2.1.1-unstable-2025-01-06";
 
   src = fetchgit {
-    url = "https://gitlab.com/flamingradian/sensh.git";
-    rev = "560b48080283fe73ca5e67635b566177028cebc9";
-    hash = "sha256-sh/0BoGpBXF+GzLstQ8mObsCtDcnccm7yT0xArijn+g=";
+    inherit (sources.sensh) url rev hash;
   };
 
   nativeBuildInputs = [

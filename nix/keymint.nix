@@ -11,6 +11,7 @@
   lib,
   stdenv,
   fetchFromGitHub,
+  sources,
   rustPlatform,
   git,
   cmake,
@@ -21,31 +22,39 @@
 
 let
   qcborSrc = fetchFromGitHub {
-    owner = "laurencelundblade";
-    repo = "QCBOR";
-    rev = "572a567d02bcfde42f5863f6a515131cc270798d";
-    hash = "sha256-pP61a2/FAlb9TJfCBkdW57o5mhnF2/mKdXnribJoFzo=";
+    inherit (sources.qcbor)
+      owner
+      repo
+      rev
+      hash
+      ;
   };
 
   teecSrc = fetchFromGitHub {
-    owner = "quic";
-    repo = "quic-teec";
-    rev = "736419e25a2036aac3292a10a93e394a90750ca3";
-    hash = "sha256-HVtw2RT3LxwcRifzX9XT7nNsWPCJesVbuAhjPSgscus=";
+    inherit (sources.quic-teec)
+      owner
+      repo
+      rev
+      hash
+      ;
   };
 
   minkSrc = fetchFromGitHub {
-    owner = "quic";
-    repo = "minkipc";
-    rev = "5e3c6951d13162a262ea65ea8e8351228f092b58";
-    hash = "sha256-52vUyTz9rLG/qmLrkS4IO+AMVbXqsBQa5RcVRy0RuQs=";
+    inherit (sources.minkipc)
+      owner
+      repo
+      rev
+      hash
+      ;
   };
 
   idlcSrc = fetchFromGitHub {
-    owner = "quic";
-    repo = "mink-idl-compiler";
-    rev = "95ebb8d6031dd2c8d3f6277e50edadee8a119d5b";
-    hash = "sha256-zKQUF2FeKDkX5jymiAZ220WmvwK6Yv3qfzBa/ionySQ=";
+    inherit (sources.idlc)
+      owner
+      repo
+      rev
+      hash
+      ;
   };
 
   # idlc is a code generator: it must run on the *build* machine.

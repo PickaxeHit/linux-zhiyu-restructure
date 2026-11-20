@@ -13,7 +13,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: nix-${{ github.ref }}
@@ -43,6 +43,9 @@ jobs:
           primary-key: nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-${{ runner.arch }}-
 
+      - name: Validate the sources lock
+        run: python3 scripts/gen-sources-lock.py --check
+
       - name: Build images and flasher
         run: |
           set -euo pipefail
@@ -52,6 +55,27 @@ jobs:
           cp -aL result-images/*.img dist/
           sha256sum dist/*.img > dist/SHA256SUMS
           ls -l dist
+
+      - name: Build cache targets
+        run: |
+          set -euo pipefail
+          mkdir -p cache
+          paths=$(nix build \
+            .#kernel .#initramfs .#keymint .#firmware .#dts \
+            .#zhiyu-install .#sensh .#sensord \
+            .#qcomVaDriver .#qcomSensors .#zhiyu-ucm2 .#udevRules \
+            --print-out-paths)
+          nix copy --to "file://$PWD/cache" $paths
+          du -sh cache
+          ls cache/nar | wc -l
+
+      - name: Publish the Nix cache
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/publish-nix-cache.sh cache "nix-cache-${{ github.run_id }}"
+
+      - name: Update the nix-stable branch
+        run: scripts/make-nix-stable.sh
 
       - name: Upload images
         uses: actions/upload-artifact@v4

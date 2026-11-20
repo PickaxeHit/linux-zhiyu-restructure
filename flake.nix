@@ -17,17 +17,18 @@
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
+          sources = builtins.fromJSON (builtins.readFile ./metadata/sources.lock.json);
 
-          kernel = pkgs.callPackage ./nix/kernel.nix { };
-          keymint = pkgs.callPackage ./nix/keymint.nix { };
-          sensh = pkgs.callPackage ./nix/sensh.nix { };
+          kernel = pkgs.callPackage ./nix/kernel.nix { inherit sources; };
+          keymint = pkgs.callPackage ./nix/keymint.nix { inherit sources; };
+          sensh = pkgs.callPackage ./nix/sensh.nix { inherit sources; };
           sensord = pkgs.callPackage ./nix/sensord.nix { inherit sensh; };
 
-          firmware = pkgs.callPackage ./nix/firmware.nix { };
+          firmware = pkgs.callPackage ./nix/firmware.nix { inherit sources; };
           udevRules = pkgs.callPackage ./nix/udev-rules.nix { };
           ucm2 = pkgs.callPackage ./nix/ucm2.nix { };
           flasher = pkgs.callPackage ./nix/flasher.nix { };
-          qcomVaDriver = pkgs.callPackage ./nix/qcom-va-driver.nix { };
+          qcomVaDriver = pkgs.callPackage ./nix/qcom-va-driver.nix { inherit sources; };
           qcomSensors = pkgs.callPackage ./nix/qcom-sensors.nix { };
 
           dts = pkgs.callPackage ./nix/dts.nix {

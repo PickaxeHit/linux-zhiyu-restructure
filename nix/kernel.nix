@@ -9,21 +9,25 @@
   lib,
   linuxManualConfig,
   fetchFromGitHub,
+  sources,
   ...
 }@args:
 
 let
   src = fetchFromGitHub {
-    owner = "PickaxeHit";
-    repo = "linux-kernel-zhiyu";
-    rev = "c43439cdf54f03154a283aa1af06fe5cd55598a3";
-    hash = "sha256-XuL5Jl9OmfHGxo3NZYVm2ypMT22wInRCdbH8TCQwYOE=";
+    inherit (sources.kernel)
+      owner
+      repo
+      rev
+      hash
+      ;
   };
 
   forwarded = builtins.removeAttrs args [
     "lib"
     "linuxManualConfig"
     "fetchFromGitHub"
+    "sources"
   ];
 
   configFile = ../configs/linux-7.3-zhiyu.config;
@@ -32,9 +36,7 @@ in
   forwarded
   // {
     pname = "linux-zhiyu";
-    version = "7.3.1";
-    # CONFIG_LOCALVERSION="-zhiyu" in the config, so this is `make kernelrelease`.
-    modDirVersion = "7.3.1-zhiyu";
+    inherit (sources.kernel) version modDirVersion;
     inherit src;
 
     configfile = configFile;

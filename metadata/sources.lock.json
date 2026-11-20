@@ -1,0 +1,66 @@
+{
+  "audioreach": {
+    "hash": "sha256-J/xqKMa428ScOa/WOvoRopZpo2L70w78XRp8v7JHKRY=",
+    "owner": "linux-msm",
+    "repo": "audioreach-topology",
+    "rev": "d6bb205aca5f4b8fa6b2f44cf8b5f6a081cbf037"
+  },
+  "idlc": {
+    "hash": "sha256-zKQUF2FeKDkX5jymiAZ220WmvwK6Yv3qfzBa/ionySQ=",
+    "owner": "quic",
+    "repo": "mink-idl-compiler",
+    "rev": "95ebb8d6031dd2c8d3f6277e50edadee8a119d5b"
+  },
+  "kernel": {
+    "hash": "sha256-XuL5Jl9OmfHGxo3NZYVm2ypMT22wInRCdbH8TCQwYOE=",
+    "modDirVersion": "7.3.1-zhiyu",
+    "owner": "PickaxeHit",
+    "repo": "linux-kernel-zhiyu",
+    "rev": "c43439cdf54f03154a283aa1af06fe5cd55598a3",
+    "version": "7.3.1"
+  },
+  "libcamera-0.7": {
+    "hash": "sha256-op4KBOSyI1KpfG4VYlUdwCzPqHRZxzbOHQXylnfQrAI=",
+    "owner": "PickaxeHit",
+    "repo": "libcamera-zhiyu",
+    "rev": "332b91cb463216003b10792f5fa7b7a12073946d",
+    "version": ">= 1.0.1"
+  },
+  "libcamera-0.8": {
+    "hash": "sha256-S767dk7ENBrglaiUx2JA1BoEtIx0nl/awxS4sUKVhNs=",
+    "owner": "PickaxeHit",
+    "repo": "libcamera-zhiyu",
+    "rev": "1226e39800bb56aa0568ff83c5a27950e2a9ef80",
+    "version": ">= 1.0.1"
+  },
+  "minkipc": {
+    "hash": "sha256-52vUyTz9rLG/qmLrkS4IO+AMVbXqsBQa5RcVRy0RuQs=",
+    "owner": "quic",
+    "repo": "minkipc",
+    "rev": "5e3c6951d13162a262ea65ea8e8351228f092b58"
+  },
+  "qcbor": {
+    "hash": "sha256-pP61a2/FAlb9TJfCBkdW57o5mhnF2/mKdXnribJoFzo=",
+    "owner": "laurencelundblade",
+    "repo": "QCBOR",
+    "rev": "572a567d02bcfde42f5863f6a515131cc270798d"
+  },
+  "qcom-va-driver": {
+    "hash": "sha256-jBqsPU/xReoQLyI01N83w848nNj+87w0ol5ESNUwI9E=",
+    "owner": "radxa-pkg",
+    "repo": "qcom-va-driver",
+    "rev": "0980a1decf26d34c9aa71cd0a4a0d25703a7a17f",
+    "version": "1.1.1"
+  },
+  "quic-teec": {
+    "hash": "sha256-HVtw2RT3LxwcRifzX9XT7nNsWPCJesVbuAhjPSgscus=",
+    "owner": "quic",
+    "repo": "quic-teec",
+    "rev": "736419e25a2036aac3292a10a93e394a90750ca3"
+  },
+  "sensh": {
+    "hash": "sha256-sh/0BoGpBXF+GzLstQ8mObsCtDcnccm7yT0xArijn+g=",
+    "rev": "560b48080283fe73ca5e67635b566177028cebc9",
+    "url": "https://gitlab.com/flamingradian/sensh.git"
+  }
+}

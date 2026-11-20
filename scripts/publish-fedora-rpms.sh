@@ -15,7 +15,7 @@ if git cat-file -e "$sha:metadata/sources.json" 2>/dev/null ||
     git cat-file -e "$sha:scripts/sensh-revision" 2>/dev/null; then
     upstream_packages+=(sensh)
 fi
-names=(linux-zhiyu-modules linux-zhiyu-headers linux-zhiyu-firmware linux-zhiyu-images
+names=(linux-zhiyu-modules linux-zhiyu-headers linux-zhiyu-firmware
        libcamera-zhiyu zhiyu-sensord "${upstream_packages[@]}")
 packages=("$rpms"/*.rpm)
 # libcamera-zhiyu is published in more than one ABI version, everything else

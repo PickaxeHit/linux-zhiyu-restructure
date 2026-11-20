@@ -9,6 +9,7 @@
   lib,
   stdenv,
   fetchFromGitHub,
+  sources,
   meson,
   ninja,
   pkg-config,
@@ -23,10 +24,12 @@ stdenv.mkDerivation {
   version = "1.1.1";
 
   src = fetchFromGitHub {
-    owner = "radxa-pkg";
-    repo = "qcom-va-driver";
-    rev = "0980a1decf26d34c9aa71cd0a4a0d25703a7a17f";
-    hash = "sha256-jBqsPU/xReoQLyI01N83w848nNj+87w0ol5ESNUwI9E=";
+    inherit (sources.qcom-va-driver)
+      owner
+      repo
+      rev
+      hash
+      ;
   };
 
   nativeBuildInputs = [
